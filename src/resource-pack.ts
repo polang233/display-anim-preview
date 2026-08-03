@@ -1,6 +1,7 @@
 /** Builds a complete Minecraft Java resource pack from baked frame models. */
 
 import type { BakedFrame } from "./bake";
+import { tr } from "./i18n";
 
 const RESOURCE_PACK_FORMAT: [number, number] = [88, 0];
 
@@ -133,7 +134,7 @@ function buildItemDefinition(
   options: PackOptions,
   modelPaths: string[]
 ): string {
-  if (!modelPaths.length) throw new Error("No models are available for the item definition");
+  if (!modelPaths.length) throw new Error(tr("dap.error.no_models"));
 
   let model: unknown = animatedModel(modelPaths);
   if (options.displayContexts?.length) {
@@ -199,14 +200,11 @@ function sanitizeTextureRefs(
 
   const validateResolvedTexture = (value: string, label: string): void => {
     if (!value.startsWith(prefix)) {
-      throw new Error(
-        `Texture "${label}" still references external atlas "${value}". ` +
-          "Minecraft 26.2 item models cannot mix item and block atlases."
-      );
+      throw new Error(tr("dap.error.external_texture", { label, value }));
     }
     const stem = value.slice(prefix.length);
     if (!textureNames.has(stem)) {
-      throw new Error(`Model references a texture that was not generated: ${value}`);
+      throw new Error(tr("dap.error.texture_not_generated", { value }));
     }
   };
 

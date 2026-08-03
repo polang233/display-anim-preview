@@ -1,6 +1,7 @@
 /** Reports baked frames outside Minecraft's -16 to 32 model-coordinate limits. */
 
 import type { OutOfBoundsHit } from "./bake";
+import { tr } from "./i18n";
 
 /** Groups hits by frame so large reports remain readable. */
 function summarizeByFrame(hits: OutOfBoundsHit[]): string[] {
@@ -21,8 +22,19 @@ function summarizeByFrame(hits: OutOfBoundsHit[]): string[] {
       Math.abs(hit.value) > Math.abs(acc.value) ? hit : acc
     );
     const names = [...new Set(frameHits.map((hit) => hit.elementName))];
-    const nameList = names.length > 2 ? `${names.slice(0, 2).join(", ")} and ${names.length} parts` : names.join(", ");
-    return `Frame ${frame}: ${nameList}, ${worst.field}.${worst.axis} = ${worst.value.toFixed(2)}`;
+    const nameList = names.length > 2
+      ? tr("dap.bounds.parts_many", {
+          names: names.slice(0, 2).join(", "),
+          count: names.length,
+        })
+      : names.join(", ");
+    return tr("dap.bounds.frame", {
+      frame,
+      parts: nameList,
+      field: worst.field,
+      axis: worst.axis,
+      value: worst.value.toFixed(2),
+    });
   });
 }
 
@@ -35,14 +47,14 @@ export function describeOutOfBounds(hits: OutOfBoundsHit[]): string | null {
   const omitted = lines.length - shown.length;
 
   const parts = [
-    `Parts exceed Minecraft model bounds in ${lines.length} frames (every axis must remain between -16 and 32).`,
+    tr("dap.bounds.summary", { frames: lines.length }),
     "",
-    "Out-of-range frames may render offset or disappear. Use the datapack next/prev functions to inspect these frames, then reduce the affected motion in Blockbench:",
+    tr("dap.bounds.guidance"),
     "",
     ...shown,
   ];
   if (omitted > 0) {
-    parts.push(`…and ${omitted} more out-of-range frames.`);
+    parts.push(tr("dap.bounds.omitted", { count: omitted }));
   }
   return parts.join("\n");
 }

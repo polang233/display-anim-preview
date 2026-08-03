@@ -3,8 +3,9 @@
 Copyright © 2026 rieyi. All rights reserved.
 
 No open-source license is granted for this repository. Unless the copyright holder gives prior
-written permission, no person may modify, redistribute, mirror, relicense, sell, or publish
-derivative versions of the source code or compiled plugin.
+written permission, no person may modify, redistribute, relicense, sell, or publish derivative
+versions of the source code or compiled plugin, except for viewing and forking through GitHub as
+permitted by GitHub's Terms of Service.
 
 The official Blockbench plugin repository may host and distribute the unmodified compiled plugin
 submitted by the copyright holder.

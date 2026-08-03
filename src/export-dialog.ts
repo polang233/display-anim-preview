@@ -15,14 +15,20 @@ import { tr } from "./i18n";
 
 const DIALOG_ID = "display_anim_preview_export";
 
-const OUTPUT_MODES = {
-  both_default: "Resource Pack + Datapack (Shared Root)",
-  both_separate: "Resource Pack + Datapack (Separate Parents)",
-  resource_only: "Resource Pack Only",
-  datapack_only: "Datapack Only",
-};
+const OUTPUT_MODE_KEYS = {
+  both_default: "dap.export.mode.both_default",
+  both_separate: "dap.export.mode.both_separate",
+  resource_only: "dap.export.mode.resource_only",
+  datapack_only: "dap.export.mode.datapack_only",
+} as const;
 
-type OutputMode = keyof typeof OUTPUT_MODES;
+type OutputMode = keyof typeof OUTPUT_MODE_KEYS;
+
+function outputModes(): Record<OutputMode, string> {
+  return Object.fromEntries(
+    Object.entries(OUTPUT_MODE_KEYS).map(([id, key]) => [id, tr(key)])
+  ) as Record<OutputMode, string>;
+}
 
 interface FormResult {
   pack_name: string;
@@ -92,10 +98,11 @@ function describeTextureSizeMismatch(): string | null {
   const list = mismatched
     .map((texture) => `  ${texture.name}: ${texture.width}×${texture.height}`)
     .join("\n");
-  return (
-    `Project UV resolution is ${Project.texture_width}×${Project.texture_height}, but these textures use different dimensions:\n\n` +
-    `${list}\n\nExported UVs may be offset. Update File → Project Settings before exporting.`
-  );
+  return tr("dap.export.texture_mismatch", {
+    project_width: Project.texture_width,
+    project_height: Project.texture_height,
+    textures: list,
+  });
 }
 
 function confirmWarnings(
@@ -112,7 +119,7 @@ function confirmWarnings(
       title: current.title,
       message: current.message,
       icon: "warning",
-      buttons: ["Cancel Export", "Export Anyway"],
+      buttons: [tr("dap.export.cancel_export"), tr("dap.export.export_anyway")],
       confirm: 1,
       cancel: 0,
     },
@@ -136,18 +143,18 @@ function chooseDestinations(mode: OutputMode, packName: string): Destination[] |
   if (mode === "both_default") {
     const root = pickParent(
       "display_anim_export",
-      `Select export root (creates resource-packs/${packName}/ and datapacks/${packName}/)`
+      tr("dap.export.pick_shared", { pack: packName })
     );
     if (!root) return null;
     return [
       {
-        label: "Resource Pack",
+        label: tr("dap.export.resource_pack"),
         scopeRoot: root,
         targetRoot: `${root}/resource-packs/${packName}`,
         kind: "resource",
       },
       {
-        label: "Datapack",
+        label: tr("dap.export.datapack"),
         scopeRoot: root,
         targetRoot: `${root}/datapacks/${packName}`,
         kind: "datapack",
@@ -158,23 +165,23 @@ function chooseDestinations(mode: OutputMode, packName: string): Destination[] |
   if (mode === "both_separate") {
     const resourceParent = pickParent(
       "display_anim_export_resource_parent",
-      `Select resource-pack parent folder (creates ${packName}/)`
+      tr("dap.export.pick_resource", { pack: packName })
     );
     if (!resourceParent) return null;
     const datapackParent = pickParent(
       "display_anim_export_datapack_parent",
-      `Select datapack parent folder (creates ${packName}/)`
+      tr("dap.export.pick_datapack", { pack: packName })
     );
     if (!datapackParent) return null;
     return [
       {
-        label: "Resource Pack",
+        label: tr("dap.export.resource_pack"),
         scopeRoot: resourceParent,
         targetRoot: `${resourceParent}/${packName}`,
         kind: "resource",
       },
       {
-        label: "Datapack",
+        label: tr("dap.export.datapack"),
         scopeRoot: datapackParent,
         targetRoot: `${datapackParent}/${packName}`,
         kind: "datapack",
@@ -185,19 +192,19 @@ function chooseDestinations(mode: OutputMode, packName: string): Destination[] |
   if (mode === "resource_only") {
     const parent = pickParent(
       "display_anim_export_resource_parent",
-      `Select resource-pack parent folder (creates ${packName}/)`
+      tr("dap.export.pick_resource", { pack: packName })
     );
     return parent
-      ? [{ label: "Resource Pack", scopeRoot: parent, targetRoot: `${parent}/${packName}`, kind: "resource" }]
+      ? [{ label: tr("dap.export.resource_pack"), scopeRoot: parent, targetRoot: `${parent}/${packName}`, kind: "resource" }]
       : null;
   }
 
   const parent = pickParent(
     "display_anim_export_datapack_parent",
-    `Select datapack parent folder (creates ${packName}/)`
+    tr("dap.export.pick_datapack", { pack: packName })
   );
   return parent
-    ? [{ label: "Datapack", scopeRoot: parent, targetRoot: `${parent}/${packName}`, kind: "datapack" }]
+    ? [{ label: tr("dap.export.datapack"), scopeRoot: parent, targetRoot: `${parent}/${packName}`, kind: "datapack" }]
     : null;
 }
 
@@ -252,7 +259,7 @@ function runExport(form: FormResult, animation: Animation): void {
       ? frameCount
       : 1;
     Blockbench.showQuickMessage(
-      `Baking ${exportedFrameCount} frames at ${fps} FPS…`,
+      tr("dap.export.baking", { frames: exportedFrameCount, fps }),
       2000
     );
     const result = bakeFrames(exportedFrameCount, fps);
@@ -261,8 +268,8 @@ function runExport(form: FormResult, animation: Animation): void {
 
     if (!frames.length) {
       Blockbench.showMessageBox({
-        title: "Export Failed",
-        message: "No frames were baked. Make sure the animation contains keyframes.",
+        title: tr("dap.export.failed"),
+        message: tr("dap.export.no_frames"),
         icon: "error",
       });
       return;
@@ -270,19 +277,21 @@ function runExport(form: FormResult, animation: Animation): void {
 
     if (sourceFps !== GAME_FPS) {
       warnings.push({
-        title: "Resampled to the Game Frame Rate",
-        message:
-          `The animation snapping rate is ${sourceFps} FPS, while Minecraft displays at most ${GAME_FPS} frames per second.` +
-          `\n\nThis export will use ${frameCount} frames at ${GAME_FPS} FPS to preserve its duration.`,
+        title: tr("dap.export.resampled_title"),
+        message: tr("dap.export.resampled_message", {
+          source_fps: sourceFps,
+          game_fps: GAME_FPS,
+          frames: frameCount,
+        }),
       });
     }
     const textureSizeWarning = describeTextureSizeMismatch();
     if (textureSizeWarning) {
-      warnings.push({ title: "Texture Resolution Mismatch", message: textureSizeWarning });
+      warnings.push({ title: tr("dap.export.texture_mismatch_title"), message: textureSizeWarning });
     }
     const boundsWarning = describeOutOfBounds(outOfBounds);
     if (boundsWarning) {
-      warnings.push({ title: "Some Frames Exceed Model Bounds", message: boundsWarning });
+      warnings.push({ title: tr("dap.export.bounds_title"), message: boundsWarning });
     }
   }
 
@@ -291,7 +300,11 @@ function runExport(form: FormResult, animation: Animation): void {
       packName,
       namespace: assetNamespace,
       itemModel,
-      description: `${displayName} (${exportedFrameCount} frames @ ${fps} FPS)`,
+      description: tr("dap.export.resource_description", {
+        name: displayName,
+        frames: exportedFrameCount,
+        fps,
+      }),
       displayContexts,
     };
     const datapackOptions: DatapackOptions = {
@@ -305,7 +318,10 @@ function runExport(form: FormResult, animation: Animation): void {
       modeObjective: sanitizeObjective(form.mode_objective, "dap_mode"),
       playingTag: sanitizeId(form.playing_tag, "dap_playing"),
       frameCount: exportedFrameCount,
-      description: `Frame animation driver for ${displayName} (${exportedFrameCount} frames)`,
+      description: tr("dap.export.datapack_description", {
+        name: displayName,
+        frames: exportedFrameCount,
+      }),
     };
 
     try {
@@ -337,27 +353,35 @@ function runExport(form: FormResult, animation: Animation): void {
             .map((destination) => `${destination.label}：${destination.targetRoot}/`)
             .join("\n");
           const optimization = packReport
-            ? `\n\nSpace optimization: sampled ${packReport.sampledFrames} frames, wrote ${packReport.uniqueModels} unique models, ` +
-              `and deduplicated ${packReport.duplicateFrames} frames.\nModel JSON: ` +
-              `${formatBytes(packReport.modelBytesBefore)} → ${formatBytes(packReport.modelBytesAfter)}。` +
+            ? `\n\n${tr("dap.export.optimization", {
+                sampled: packReport.sampledFrames,
+                unique: packReport.uniqueModels,
+                duplicates: packReport.duplicateFrames,
+                before: formatBytes(packReport.modelBytesBefore),
+                after: formatBytes(packReport.modelBytesAfter),
+              })}` +
               (packReport.omittedUntexturedFaces
-                ? `\nOmitted ${packReport.omittedUntexturedFaces} untextured faces and removed ` +
-                  `${packReport.omittedEmptyElements} elements without visible faces.`
+                ? `\n${tr("dap.export.omitted", {
+                    faces: packReport.omittedUntexturedFaces,
+                    elements: packReport.omittedEmptyElements,
+                  })}`
                 : "")
             : "";
           const commands = includesDatapack(mode)
-            ? `\n\nIn-game commands:\n/function ${dataNamespace}:give\n/function ${dataNamespace}:play_loop`
+            ? `\n\n${tr("dap.export.commands")}\n/function ${dataNamespace}:give\n/function ${dataNamespace}:play_loop`
             : "";
           Blockbench.showMessageBox({
-            title: "Export Complete",
-            message: `Verified and wrote ${count} files.\n\n${locations}${optimization}${commands}`,
+            title: tr("dap.export.complete"),
+            message: `${tr("dap.export.locations", { count, locations })}${optimization}${commands}`,
             icon: "check_circle",
           });
         } catch (err) {
           console.error("Export failed", err);
           Blockbench.showMessageBox({
-            title: "Export Failed",
-            message: `An error occurred while writing files:\n${(err as Error).message ?? String(err)}`,
+            title: tr("dap.export.failed"),
+            message: tr("dap.export.write_error", {
+              error: (err as Error).message ?? String(err),
+            }),
             icon: "error",
           });
         }
@@ -368,14 +392,17 @@ function runExport(form: FormResult, animation: Animation): void {
         return;
       }
       const summary = existing
-        .map(({ destination, count }) => `${destination.targetRoot}/ (${count} files)`)
+        .map(
+          ({ destination, count }) =>
+            `${destination.targetRoot}/ (${tr("dap.export.file_count", { count: count ?? 0 })})`
+        )
         .join("\n");
       Blockbench.showMessageBox(
         {
-          title: "Target Pack Already Exists",
-          message: `Continuing overwrites matching files but does not delete other files:\n\n${summary}`,
+          title: tr("dap.export.target_exists"),
+          message: tr("dap.export.target_exists_message", { summary }),
           icon: "warning",
-          buttons: ["Cancel", "Overwrite and Export"],
+          buttons: [tr("dap.export.cancel"), tr("dap.export.overwrite")],
           confirm: 1,
           cancel: 0,
         },
@@ -385,7 +412,7 @@ function runExport(form: FormResult, animation: Animation): void {
       );
     } catch (err) {
       Blockbench.showMessageBox({
-        title: "Export Preparation Failed",
+        title: tr("dap.export.prepare_failed"),
         message: (err as Error).message ?? String(err),
         icon: "error",
       });
@@ -397,14 +424,14 @@ function runExport(form: FormResult, animation: Animation): void {
 
 export function openExportDialog(): void {
   if (exportInProgress) {
-    Blockbench.showQuickMessage("The previous export is still running", 2000);
+    Blockbench.showQuickMessage(tr("dap.export.busy"), 2000);
     return;
   }
   const animation = Animation.selected ?? Animation.all[0];
   if (!animation) {
     Blockbench.showMessageBox({
-      title: "No Animation to Export",
-      message: "Create an animation with keyframes before exporting.",
+      title: tr("dap.export.no_animation_title"),
+      message: tr("dap.export.no_animation_message"),
       icon: "error",
     });
     return;
@@ -417,12 +444,14 @@ export function openExportDialog(): void {
   const defaultItemModel = sanitizeId(Project?.name ?? "", defaultPackName);
   const fpsText =
     fps === GAME_FPS
-      ? `Exports ${gameFrameCount} frames at 20 FPS, one frame per game tick.`
-      : `The current snapping rate is ${fps} FPS (${frameCount} source samples). Export resamples to ` +
-        `${GAME_FPS} FPS (${gameFrameCount} frames) while preserving duration.`;
-  const helpText =
-    "On macOS, Open selects a parent folder; the plugin then creates <pack name>/ inside it.<br>" +
-    "The default mode creates resource-packs/<pack name>/ and datapacks/<pack name>/.";
+      ? tr("dap.export.fps_exact", { frames: gameFrameCount })
+      : tr("dap.export.fps_resample", {
+          source_fps: fps,
+          source_frames: frameCount,
+          game_fps: GAME_FPS,
+          game_frames: gameFrameCount,
+        });
+  const helpText = tr("dap.export.folder_help");
 
   new Dialog<FormResult>(DIALOG_ID, {
     title: tr("dap.export.title"),
@@ -433,7 +462,7 @@ export function openExportDialog(): void {
         label: tr("dap.export.output"),
         type: "select",
         value: "both_default",
-        options: OUTPUT_MODES,
+        options: outputModes(),
       },
       pack_name: { label: tr("dap.export.pack_name"), type: "text", value: defaultPackName },
       asset_namespace: { label: tr("dap.export.asset_namespace"), type: "text", value: "kaleidoscope_lab" },

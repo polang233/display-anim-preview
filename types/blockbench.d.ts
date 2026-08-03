@@ -21,6 +21,7 @@ declare global {
     title: string;
     author: string;
     description: string;
+    about?: string;
     icon: string;
     version: string;
     min_version?: string;

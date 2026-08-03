@@ -3,6 +3,7 @@ import {
   cloneCompiledDisplay,
   type CompiledDisplay,
 } from "./display-snapshot";
+import { tr } from "./i18n";
 
 /**
  * Bakes skeletal animation into flat Java block models. Transform accumulation mirrors
@@ -272,10 +273,12 @@ export function bakeFrames(
         `Bake rollback incomplete: ${keyframesBefore} keyframes before, ${keyframesAfter} after (lost ${lost})`
       );
       Blockbench.showMessageBox({
-        title: "Incomplete Rollback — Do Not Save",
-        message:
-          `The keyframe count changed after baking: ${keyframesBefore} before, ${keyframesAfter} now ` +
-          `(${lost} missing).\n\nUndo immediately with Ctrl+Z, or close without saving and reopen the file.`,
+        title: tr("dap.rollback.title"),
+        message: tr("dap.rollback.message", {
+          before: keyframesBefore,
+          after: keyframesAfter,
+          lost,
+        }),
         icon: "error",
       });
     }

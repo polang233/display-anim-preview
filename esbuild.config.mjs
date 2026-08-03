@@ -10,6 +10,7 @@ import { dirname, resolve } from "node:path";
  */
 const outfileArgument = process.argv.find((argument) => argument.startsWith("--outfile="));
 const outfile = outfileArgument?.slice("--outfile=".length) || "dist/display_anim_preview.js";
+const forcedLanguage = process.argv.includes("--language=zh") ? '"zh"' : "null";
 
 const options = {
   entryPoints: ["src/plugin.ts"],
@@ -19,6 +20,9 @@ const options = {
   target: "es2020",
   platform: "browser",
   legalComments: "none",
+  define: {
+    __DAP_FORCE_LANGUAGE__: forcedLanguage,
+  },
 };
 
 const watch = process.argv.includes("--watch");

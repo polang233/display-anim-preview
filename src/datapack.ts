@@ -1,5 +1,7 @@
 /** Builds the Minecraft 26.2 datapack that drives baked item animations. */
 
+import { tr } from "./i18n";
+
 const DATA_PACK_FORMAT: [number, number] = [107, 1];
 
 export interface DatapackOptions {
@@ -25,8 +27,13 @@ function prefix(options: DatapackOptions): string {
   return `{"text":"[${options.packName}] ","color":"gold"}`;
 }
 
-function tellraw(options: DatapackOptions, text: string, color: string): string {
-  return `tellraw @s [${prefix(options)},{"text":"${text}","color":"${color}"}]`;
+function tellraw(
+  options: DatapackOptions,
+  text: string,
+  color: string,
+  target = "@s"
+): string {
+  return `tellraw ${target} [${prefix(options)},{"text":${JSON.stringify(text)},"color":"${color}"}]`;
 }
 
 function json(value: unknown): string {
@@ -79,7 +86,7 @@ export function buildDatapack(options: DatapackOptions): DatapackFile[] {
     lines(
       `scoreboard objectives add ${frameScore} dummy`,
       `scoreboard objectives add ${modeScore} dummy`,
-      `tellraw @a [${prefix(options)},{"text":"Datapack loaded. Run /function ${ns}:give to get the animated item.","color":"green"}]`
+      tellraw(options, tr("dap.datapack.loaded", { namespace: ns }), "green", "@a")
     )
   );
 
@@ -111,7 +118,7 @@ export function buildDatapack(options: DatapackOptions): DatapackFile[] {
       `scoreboard players set @s ${frameScore} 0`,
       `scoreboard players set @s ${modeScore} 0`,
       `tag @s remove ${tag}`,
-      `tellraw @s [${prefix(options)},{"text":"Animated item given. Use play_loop, play_once, or next/prev while holding it.","color":"green"}]`
+      tellraw(options, tr("dap.datapack.item_given"), "green")
     )
   );
 
@@ -119,28 +126,28 @@ export function buildDatapack(options: DatapackOptions): DatapackFile[] {
   fn(
     "play_loop",
     lines(
-      `${startGuard} tellraw @s [${prefix(options)},{"text":"Hold the animated item in your main hand first.","color":"red"}]`,
+      `${startGuard} ${tellraw(options, tr("dap.datapack.hold_item"), "red")}`,
       `${ifHeld} scoreboard players set @s ${frameScore} 0`,
       `${ifHeld} scoreboard players set @s ${modeScore} 1`,
       applyFrame,
       `${ifHeld} tag @s add ${tag}`,
-      `${ifHeld} ${tellraw(options, `Loop playback started (20 FPS, frames 0-${lastFrame}).`, "green")}`
+      `${ifHeld} ${tellraw(options, tr("dap.datapack.loop_started", { last_frame: lastFrame }), "green")}`
     )
   );
 
   fn(
     "play_once",
     lines(
-      `${startGuard} tellraw @s [${prefix(options)},{"text":"Hold the animated item in your main hand first.","color":"red"}]`,
+      `${startGuard} ${tellraw(options, tr("dap.datapack.hold_item"), "red")}`,
       `${ifHeld} scoreboard players set @s ${frameScore} 0`,
       `${ifHeld} scoreboard players set @s ${modeScore} 2`,
       applyFrame,
       `${ifHeld} tag @s add ${tag}`,
-      `${ifHeld} ${tellraw(options, `Single playback started and will stop on frame ${lastFrame}.`, "green")}`
+      `${ifHeld} ${tellraw(options, tr("dap.datapack.once_started", { last_frame: lastFrame }), "green")}`
     )
   );
 
-  const frameReadout = `tellraw @s [${prefix(options)},{"text":"Current frame: ","color":"gold"},{"score":{"name":"@s","objective":"${frameScore}"},"color":"aqua"}]`;
+  const frameReadout = `tellraw @s [${prefix(options)},{"text":${JSON.stringify(tr("dap.datapack.current_frame"))},"color":"gold"},{"score":{"name":"@s","objective":"${frameScore}"},"color":"aqua"}]`;
   fn(
     "next",
     lines(
@@ -168,7 +175,7 @@ export function buildDatapack(options: DatapackOptions): DatapackFile[] {
       `${ifHeld} scoreboard players set @s ${frameScore} 0`,
       `${ifHeld} scoreboard players set @s ${modeScore} 0`,
       applyFrame,
-      `${ifHeld} ${tellraw(options, "Reset to frame 0.", "green")}`
+      `${ifHeld} ${tellraw(options, tr("dap.datapack.reset"), "green")}`
     )
   );
   fn(
@@ -176,7 +183,7 @@ export function buildDatapack(options: DatapackOptions): DatapackFile[] {
     lines(
       `tag @s remove ${tag}`,
       `scoreboard players set @s ${modeScore} 0`,
-      tellraw(options, "Playback stopped on the current frame.", "yellow")
+      tellraw(options, tr("dap.datapack.stopped"), "yellow")
     )
   );
 

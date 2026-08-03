@@ -1,6 +1,7 @@
 /** Writes generated packs through Blockbench's permission-scoped filesystem access. */
 
 import type { PackFile } from "./resource-pack";
+import { tr } from "./i18n";
 
 const MANIFEST_NAME = ".display-anim-preview-manifest.json";
 
@@ -13,7 +14,7 @@ export interface WriteTarget {
 function getScopedFs(scopeRoot: string, prompt: boolean): NodeFs | null {
   const fs = requireNativeModule("fs", {
     scope: scopeRoot,
-    message: "Resource-pack and datapack export requires access to the selected folder",
+    message: tr("dap.permission.export"),
     show_permission_dialog: prompt,
   }) as NodeFs | undefined;
   return fs ?? null;
@@ -70,7 +71,7 @@ function cleanPreviousGeneratedFiles(
 export function writePacks(scopeRoot: string, targets: WriteTarget[]): number {
   const fs = getScopedFs(scopeRoot, true);
   if (!fs) {
-    throw new Error("Write permission was not granted; no files were generated");
+    throw new Error(tr("dap.error.write_permission"));
   }
   const pathModule = getPathModule();
 
@@ -85,10 +86,10 @@ export function writePacks(scopeRoot: string, targets: WriteTarget[]): number {
         savetype: file.isImage ? "image" : "text",
       });
       if (!fs.existsSync(fullPath)) {
-        throw new Error(`File was not written: ${fullPath}`);
+        throw new Error(tr("dap.error.file_not_written", { path: fullPath }));
       }
       if (!file.isImage && fs.readFileSync(fullPath, "utf8") !== file.content) {
-        throw new Error(`Written file failed content verification: ${fullPath}`);
+        throw new Error(tr("dap.error.file_verify", { path: fullPath }));
       }
       written++;
     }
@@ -103,10 +104,10 @@ export function writePacks(scopeRoot: string, targets: WriteTarget[]): number {
       savetype: "text",
     });
     if (!fs.existsSync(manifestPath)) {
-      throw new Error(`Export manifest was not written: ${manifestPath}`);
+      throw new Error(tr("dap.error.manifest_not_written", { path: manifestPath }));
     }
     if (fs.readFileSync(manifestPath, "utf8") !== manifestContent) {
-      throw new Error(`Written export manifest failed verification: ${manifestPath}`);
+      throw new Error(tr("dap.error.manifest_verify", { path: manifestPath }));
     }
   }
   return written;
@@ -119,7 +120,7 @@ export function writePacks(scopeRoot: string, targets: WriteTarget[]): number {
 export function inspectExisting(scopeRoot: string, dir: string): number | null {
   const fs = getScopedFs(scopeRoot, true);
   if (!fs) {
-    throw new Error("Read permission was not granted; export cannot continue");
+    throw new Error(tr("dap.error.read_permission"));
   }
   if (!fs.existsSync(dir)) return null;
   const pathModule = getPathModule();

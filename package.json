@@ -9,13 +9,15 @@
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs",
+    "build:zh": "node esbuild.config.mjs --language=zh --outfile=dist/display_anim_preview.zh-CN.js",
+    "build:release": "npm run build && npm run build:zh",
     "build:official": "node esbuild.config.mjs --outfile=display_anim_preview.js",
     "watch": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-format.mjs && node scripts/test-display-settings.mjs && node scripts/test-resource-pack.mjs"
+    "test": "node scripts/test-format.mjs && node scripts/test-display-settings.mjs && node scripts/test-resource-pack.mjs && node scripts/test-i18n.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.1",
     "typescript": "^5.6.0"
   }
 }

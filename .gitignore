@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+/RELEASE_UPLOAD_ONLY_*/
+/docs

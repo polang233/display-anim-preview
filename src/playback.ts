@@ -1,4 +1,5 @@
 import { getDisplayAnimationEnabled } from "./display-animation-settings";
+import { tr } from "./i18n";
 
 /** Bridges the plugin controls to Blockbench's official animation timeline and playback state. */
 
@@ -126,7 +127,7 @@ function handleTimelinePlay(): void {
   if (!previewPlaybackAllowed()) {
     Timeline.pause();
     Blockbench.showQuickMessage(
-      "Animation is disabled for the current display context",
+      tr("dap.panel.play_disabled"),
       2200
     );
     return;
@@ -220,7 +221,7 @@ export function togglePlay(): void {
     !isCurrentDisplayAnimationEnabled()
   ) {
     Blockbench.showQuickMessage(
-      "Animation is disabled for the current display context",
+      tr("dap.panel.play_disabled"),
       2200
     );
     return;

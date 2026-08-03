@@ -224,10 +224,10 @@
     Language.addTranslations("zh", ZH);
   }
   function isChineseOnlyBuild() {
-    return false;
+    return true;
   }
   function tr(key, replacements = {}) {
-    const forcedLanguage = false ? null : null;
+    const forcedLanguage = false ? null : "zh";
     let text = forcedLanguage === "zh" ? ZH[key] ?? EN[key] ?? key : tl(key);
     if (text === key) text = EN[key] ?? key;
     for (const [name, value] of Object.entries(replacements)) {
