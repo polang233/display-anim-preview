@@ -1,0 +1,21 @@
+{
+  "name": "display-anim-preview",
+  "version": "1.0.0",
+  "description": "Preview and export frame-baked Minecraft Java item animations from Blockbench.",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": "https://github.com/rieyi/display-anim-preview",
+  "bugs": "https://github.com/rieyi/display-anim-preview/issues",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "build:official": "node esbuild.config.mjs --outfile=display_anim_preview.js",
+    "watch": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-format.mjs && node scripts/test-display-settings.mjs && node scripts/test-resource-pack.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}
