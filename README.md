@@ -2,27 +2,29 @@
 
 [简体中文](https://github.com/rieyi/display-anim-preview/blob/main/README.zh-CN.md)
 
-Java Display Animator is a desktop Blockbench plugin for creating frame-baked Minecraft Java item
-animations. It previews one animation across item display contexts, lets each context decide whether
-to animate, and exports a complete resource pack plus the datapack that drives the frames.
+Java Display Animator is a Blockbench Desktop plugin for creating and exporting frame-baked
+Minecraft Java item animations. Preview the animation directly in Blockbench, choose whether it
+plays in GUI, first-person, third-person, ground, and other display contexts, then export the
+required resource pack and datapack in one operation.
 
-When an externally provided `java_block_sequence` project is already open, preview and pack export
-remain available. The plugin resolves Blockbench's retained built-in Java compiler without taking
-ownership of, replacing, or exporting through the external format.
+If a `java_block_sequence` project created by another plugin is already open, this plugin can still
+preview its animation and export Minecraft resource and data packs. It only uses an available Java
+model compiler retained by Blockbench; it does not take ownership of, modify, or replace the other
+plugin's project format, and it does not restore the removed legacy model-sequence ZIP exporter.
 
 ## Demos
 
 ### Blockbench display-context animation preview
 
-[![Blockbench display-context animation preview](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/blockbench-preview.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/blockbench-preview.mp4)
+https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1
 
-Select the image to play the MP4 demo.
+If the player is unavailable, [open the Blockbench demo directly](https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1).
 
 ### In-game Minecraft result
 
-[![In-game Minecraft animation result](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/minecraft-result.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/minecraft-result.mp4)
+https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
 
-Select the image to play the MP4 demo.
+If the player is unavailable, [open the Minecraft demo directly](https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a).
 
 ## Features
 

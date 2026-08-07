@@ -2,27 +2,27 @@
 
 [English](https://github.com/rieyi/display-anim-preview/blob/main/README.md)
 
-Java 逐帧显示动画是一款 Blockbench 桌面端插件，用于制作 Minecraft Java 版物品逐帧烘焙动画。
-它可以在同一个工程中预览不同物品显示位置，分别决定每个显示位置是否播放动画，并直接导出
-完整资源包与负责驱动帧切换的数据包。
+Java 逐帧显示动画是一款适用于 Blockbench 桌面版的插件，用于制作并导出 Minecraft Java 版的
+物品逐帧动画。你可以直接在 Blockbench 中预览动画，分别设置 GUI、第一人称、第三人称、地面
+等显示位置是否播放动画，然后一键导出所需的资源包和数据包。
 
-外部插件提供的 `java_block_sequence` 工程已经正常打开时，本插件仍可对它进行预览和包导出。
-插件会自动回退到 Blockbench 保留的内置 Java 编译器，不接管或覆盖外部格式，也不会恢复旧式
-模型序列 ZIP 导出。
+如果当前打开的是由其他插件创建的 `java_block_sequence` 工程，本插件仍可预览动画并导出
+Minecraft 资源包和数据包。它只调用 Blockbench 当前可用的 Java 模型编译器，不会接管、修改
+或替换其他插件的工程格式，也不会提供已经移除的旧式模型序列 ZIP 导出功能。
 
 ## 演示效果
 
 ### Blockbench 显示位置动画预览
 
-[![Blockbench 显示位置动画预览](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/blockbench-preview.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/blockbench-preview.mp4)
+https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1
 
-点击图片播放 MP4 演示。
+如果播放器没有显示，可[直接打开 Blockbench 演示视频](https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1)。
 
 ### Minecraft 游戏内效果
 
-[![Minecraft 游戏内动画效果](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/minecraft-result.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/minecraft-result.mp4)
+https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
 
-点击图片播放 MP4 演示。
+如果播放器没有显示，可[直接打开 Minecraft 演示视频](https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a)。
 
 ## 主要功能
 
