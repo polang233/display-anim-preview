@@ -1,6 +1,4 @@
 import { build, context } from "esbuild";
-import { copyFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
 
 /**
  * Bundle the plugin into a single JS file loadable via Blockbench
@@ -33,10 +31,5 @@ if (watch) {
   console.log("watching...");
 } else {
   await build(options);
-  const iconSource = resolve("assets/icon.png");
-  const iconTarget = resolve(dirname(outfile), "icon.png");
-  if (iconSource !== iconTarget) {
-    await copyFile(iconSource, iconTarget);
-  }
   console.log(`built ${outfile}`);
 }

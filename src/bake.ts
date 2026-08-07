@@ -4,6 +4,7 @@ import {
   type CompiledDisplay,
 } from "./display-snapshot";
 import { tr } from "./i18n";
+import { resolveJavaBlockCodec } from "./java-block-codec";
 
 /**
  * Bakes skeletal animation into flat Java block models. Transform accumulation mirrors
@@ -36,7 +37,7 @@ export interface BakeResult {
 function snapshotCompiledDisplay(): CompiledDisplay | undefined {
   try {
     const compiled = JSON.parse(
-      Codecs.java_block.compile({ prevent_dialog: true })
+      resolveJavaBlockCodec().compile({ prevent_dialog: true })
     ) as { display?: CompiledDisplay };
     return cloneCompiledDisplay(compiled.display);
   } catch (err) {
@@ -241,7 +242,7 @@ export function bakeFrames(
         flattenHierarchy();
 
         const json = applyCompiledDisplaySnapshot(
-          Codecs.java_block.compile({ prevent_dialog: true }),
+          resolveJavaBlockCodec().compile({ prevent_dialog: true }),
           displaySnapshot
         );
         frames.push({ frame, json });

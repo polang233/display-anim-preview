@@ -1,6 +1,7 @@
 /** Registers the plugin's independent model format without modifying the Java block codec. */
 
 import { tr } from "./i18n";
+import { resolveJavaBlockCodec } from "./java-block-codec";
 
 export const FORMAT_ID = "display_animation_sequence";
 
@@ -12,7 +13,7 @@ export const FORMAT_COORDINATE_OPTIONS = {
 let ownedFormat: ModelFormatInstance | null = null;
 
 function createFormat(id: string): ModelFormatInstance {
-  const javaBlockCodec = Formats.java_block?.codec ?? Codecs.java_block;
+  const javaBlockCodec = resolveJavaBlockCodec();
 
   return new ModelFormat(id, {
     id,

@@ -1,13 +1,28 @@
 # Java Display Animator
 
-[简体中文](README.zh-CN.md)
+[简体中文](https://github.com/rieyi/display-anim-preview/blob/main/README.zh-CN.md)
 
 Java Display Animator is a desktop Blockbench plugin for creating frame-baked Minecraft Java item
 animations. It previews one animation across item display contexts, lets each context decide whether
 to animate, and exports a complete resource pack plus the datapack that drives the frames.
 
-The plugin runs independently. It does not require Java Block Sequencer or another model-format
-plugin, and it does not register, replace, or remove formats owned by other plugins.
+When an externally provided `java_block_sequence` project is already open, preview and pack export
+remain available. The plugin resolves Blockbench's retained built-in Java compiler without taking
+ownership of, replacing, or exporting through the external format.
+
+## Demos
+
+### Blockbench display-context animation preview
+
+[![Blockbench display-context animation preview](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/blockbench-preview.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/blockbench-preview.mp4)
+
+Select the image to play the MP4 demo.
+
+### In-game Minecraft result
+
+[![In-game Minecraft animation result](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/minecraft-result.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/minecraft-result.mp4)
+
+Select the image to play the MP4 demo.
 
 ## Features
 
@@ -38,16 +53,18 @@ the same plugin ID, so install only one at a time.
 
 | Package | Language behavior |
 |---|---|
-| Universal | English base interface; follows Blockbench and automatically uses Simplified Chinese when Blockbench is Chinese |
-| Simplified Chinese | Always uses Simplified Chinese, regardless of the Blockbench interface language |
+| [Download Universal](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-universal.zip) | English base interface; follows Blockbench and automatically uses Simplified Chinese when Blockbench is Chinese |
+| [Download Simplified Chinese](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-zh-CN.zip) | Always uses Simplified Chinese, regardless of the Blockbench interface language |
 
 The official Blockbench plugin repository receives the Universal build.
+Use [SHA256SUMS.txt](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/SHA256SUMS.txt)
+to verify downloaded files.
 
 ## Installation
 
 ### From GitHub Releases
 
-1. Open the repository's **Releases** page and download the Universal or Simplified Chinese ZIP.
+1. Use the links above to download the Universal or Simplified Chinese ZIP.
 2. Extract the ZIP. Do not try to load the ZIP itself.
 3. In Blockbench, open **File → Plugins**.
 4. Choose **Load Plugin from File** and select `display_anim_preview.js` from the extracted folder.
@@ -134,8 +151,9 @@ remain between `-16` and `32`. If the report lists an out-of-range frame, use th
    namespace, scoreboards, and playback tag.
 4. Choose the requested parent folder. On macOS, the folder picker selects the existing parent and
    the plugin creates the named pack directory inside it.
-5. Review any frame-rate, texture-resolution, or model-bounds warning and continue only when the
-   result is intentional.
+5. If frame-rate, texture-resolution, or model-bounds issues exist, the plugin combines every
+   warning into one dialog. Files are generated only after **Export Anyway** is selected. Cancelling
+   or closing the dialog writes nothing and displays an explicit cancellation message.
 
 The default shared-root layout is:
 
@@ -145,16 +163,20 @@ selected-root/
 └── datapacks/<pack-name>/
 ```
 
-The completion dialog reports sampled frames, unique model files, deduplicated frames, model JSON
-size, omitted untextured faces, output locations, and the main in-game commands.
+Files have been written and verified only when the **Export Complete** dialog appears. It reports
+sampled frames, unique model files, deduplicated frames, model JSON size, omitted untextured faces,
+output locations, and the main in-game commands.
 
 ### 7. Install and test in Minecraft
 
 1. Place the generated resource-pack directory in the Minecraft `resourcepacks` folder or the test
    server's configured resource-pack location.
 2. Place the generated datapack directory in `<world>/datapacks/`.
-3. Reload the resource pack with `F3+T` and reload the datapack or reopen the world.
-4. Run the following commands using the namespace selected during export:
+3. Open **Options → Resource Packs**, move the newly copied pack to the selected side, and choose
+   **Done**. Copying a directory into `resourcepacks` or pressing `F3+T` does not enable a pack that
+   has not been selected.
+4. Once the pack is enabled, use `F3+T` after re-exporting. Reload the datapack or reopen the world.
+5. Run the following commands using the namespace selected during export:
 
 ```mcfunction
 /function <namespace>:give
@@ -178,11 +200,19 @@ animation switch is enabled should change frames.
 
 ### Purple-and-black missing texture
 
+- First confirm that the exported pack is enabled under **Options → Resource Packs**. `F3+T` reloads
+  enabled packs but does not enable a newly copied pack.
 - Confirm every visible cube face has a project texture.
-- Ensure Project Settings use the same UV resolution as the source textures.
+- A UV-resolution mismatch usually causes shifted, stretched, or cropped texture regions rather
+  than a purple-and-black placeholder. Still confirm that Project Settings match the intended UV
+  workflow.
 - Re-export and reload resources with `F3+T`; leaving and re-entering a world does not necessarily
   reload the active resource pack.
-- Inspect the client `latest.log` for missing model or texture paths.
+- Inspect the client game directory's `logs/latest.log`, not the server log. Resource failures are
+  commonly logged once during world entry or `F3+T`; search for `Missing texture`,
+  `Unable to load model`, `Failed to load`, `item_model`, and `atlas`.
+- The `Reloading ResourceManager` list should include the exported pack. A list containing only
+  `vanilla` and mods means that the pack is not enabled.
 
 ### In-game position differs from Display mode
 
@@ -218,6 +248,7 @@ requires the loaded filename to match the plugin ID.
 
 ## Copyright
 
-Copyright © 2026 rieyi. All rights reserved. See [COPYRIGHT.md](COPYRIGHT.md).
+Copyright © 2026 rieyi. All rights reserved. See
+[COPYRIGHT.md](https://github.com/rieyi/display-anim-preview/blob/main/COPYRIGHT.md).
 
 This repository is publicly viewable but intentionally does not grant an open-source license.

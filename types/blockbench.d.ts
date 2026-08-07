@@ -62,7 +62,7 @@ declare global {
   interface ModelFormatInstance {
     id: string;
     name: string;
-    codec?: unknown;
+    codec?: { compile?(options?: { prevent_dialog?: boolean }): string } | null;
     delete(): void;
   }
 
@@ -309,7 +309,7 @@ declare global {
   };
 
   const Codecs: {
-    java_block: { compile(options?: { prevent_dialog?: boolean }): string };
+    java_block?: { compile(options?: { prevent_dialog?: boolean }): string };
   };
 
   const Timeline: {

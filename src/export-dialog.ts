@@ -105,28 +105,31 @@ function describeTextureSizeMismatch(): string | null {
   });
 }
 
-function confirmWarnings(
-  warnings: Array<{ title: string; message: string }>,
-  onProceed: () => void
-): void {
-  const [current, ...rest] = warnings;
-  if (!current) {
-    onProceed();
-    return;
-  }
-  Blockbench.showMessageBox(
-    {
-      title: current.title,
-      message: current.message,
-      icon: "warning",
-      buttons: [tr("dap.export.cancel_export"), tr("dap.export.export_anyway")],
-      confirm: 1,
-      cancel: 0,
-    },
-    (button) => {
-      if (button === 1) confirmWarnings(rest, onProceed);
-    }
-  );
+export function confirmWarnings(
+  warnings: Array<{ title: string; message: string }>
+): Promise<boolean> {
+  if (!warnings.length) return Promise.resolve(true);
+
+  const message = warnings
+    .map(
+      (warning, index) =>
+        `**${index + 1}. ${warning.title}**\n\n${warning.message}`
+    )
+    .join("\n\n---\n\n");
+
+  return new Promise((resolve) => {
+    Blockbench.showMessageBox(
+      {
+        title: tr("dap.export.warnings_title"),
+        message,
+        icon: "warning",
+        buttons: [tr("dap.export.cancel_export"), tr("dap.export.export_anyway")],
+        confirm: 1,
+        cancel: 0,
+      },
+      (button) => resolve(button === 1)
+    );
+  });
 }
 
 function pickParent(resourceId: string, title: string): string | null {
@@ -228,7 +231,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-function runExport(form: FormResult, animation: Animation): void {
+async function runExport(form: FormResult, animation: Animation): Promise<void> {
   const mode = form.output_mode || "both_default";
   const sourceFps = animation.snapping || GAME_FPS;
   const fps = GAME_FPS;
@@ -240,7 +243,10 @@ function runExport(form: FormResult, animation: Animation): void {
   const displayName = form.display_name.trim() || animation.name;
 
   const destinations = chooseDestinations(mode, packName);
-  if (!destinations) return;
+  if (!destinations) {
+    Blockbench.showQuickMessage(tr("dap.export.cancelled"), 2500);
+    return;
+  }
 
   let frames: BakedFrame[] = [];
   let displayContexts: PackOptions["displayContexts"];
@@ -295,8 +301,14 @@ function runExport(form: FormResult, animation: Animation): void {
     }
   }
 
-  const proceed = (): void => {
-    const resourceOptions: PackOptions = {
+  const warningsAccepted = await confirmWarnings(warnings);
+  if (!warningsAccepted) {
+    Blockbench.showQuickMessage(tr("dap.export.cancelled"), 2500);
+    return;
+  }
+
+  Blockbench.showQuickMessage(tr("dap.export.preparing_files"), 2000);
+  const resourceOptions: PackOptions = {
       packName,
       namespace: assetNamespace,
       itemModel,
@@ -306,8 +318,8 @@ function runExport(form: FormResult, animation: Animation): void {
         fps,
       }),
       displayContexts,
-    };
-    const datapackOptions: DatapackOptions = {
+  };
+  const datapackOptions: DatapackOptions = {
       packName,
       dataNamespace,
       assetNamespace,
@@ -322,104 +334,101 @@ function runExport(form: FormResult, animation: Animation): void {
         name: displayName,
         frames: exportedFrameCount,
       }),
-    };
+  };
 
-    try {
-      let packReport: PackBuildReport | null = null;
-      const resourceBuild = includesResource(mode)
-        ? buildResourcePack(frames, resourceOptions)
-        : null;
-      if (resourceBuild) packReport = resourceBuild.report;
+  try {
+    let packReport: PackBuildReport | null = null;
+    const resourceBuild = includesResource(mode)
+      ? buildResourcePack(frames, resourceOptions)
+      : null;
+    if (resourceBuild) packReport = resourceBuild.report;
 
-      const targets: WriteTarget[] = destinations.map((destination) => ({
-        root: destination.targetRoot,
-        files:
-          destination.kind === "resource"
-            ? resourceBuild!.files
-            : buildDatapack(datapackOptions),
-      }));
+    const targets: WriteTarget[] = destinations.map((destination) => ({
+      root: destination.targetRoot,
+      files:
+        destination.kind === "resource"
+          ? resourceBuild!.files
+          : buildDatapack(datapackOptions),
+    }));
 
-      const existing = destinations
-        .map((destination) => ({
-          destination,
-          count: inspectExisting(destination.scopeRoot, destination.targetRoot),
-        }))
-        .filter((entry) => entry.count !== null);
+    const existing = destinations
+      .map((destination) => ({
+        destination,
+        count: inspectExisting(destination.scopeRoot, destination.targetRoot),
+      }))
+      .filter((entry) => entry.count !== null);
 
-      const write = (): void => {
-        try {
-          const count = writeDestinations(destinations, targets);
-          const locations = destinations
-            .map((destination) => `${destination.label}：${destination.targetRoot}/`)
-            .join("\n");
-          const optimization = packReport
-            ? `\n\n${tr("dap.export.optimization", {
-                sampled: packReport.sampledFrames,
-                unique: packReport.uniqueModels,
-                duplicates: packReport.duplicateFrames,
-                before: formatBytes(packReport.modelBytesBefore),
-                after: formatBytes(packReport.modelBytesAfter),
-              })}` +
-              (packReport.omittedUntexturedFaces
-                ? `\n${tr("dap.export.omitted", {
-                    faces: packReport.omittedUntexturedFaces,
-                    elements: packReport.omittedEmptyElements,
-                  })}`
-                : "")
-            : "";
-          const commands = includesDatapack(mode)
-            ? `\n\n${tr("dap.export.commands")}\n/function ${dataNamespace}:give\n/function ${dataNamespace}:play_loop`
-            : "";
-          Blockbench.showMessageBox({
-            title: tr("dap.export.complete"),
-            message: `${tr("dap.export.locations", { count, locations })}${optimization}${commands}`,
-            icon: "check_circle",
-          });
-        } catch (err) {
-          console.error("Export failed", err);
-          Blockbench.showMessageBox({
-            title: tr("dap.export.failed"),
-            message: tr("dap.export.write_error", {
-              error: (err as Error).message ?? String(err),
-            }),
-            icon: "error",
-          });
-        }
-      };
-
-      if (!existing.length) {
-        write();
-        return;
-      }
+    if (existing.length) {
       const summary = existing
         .map(
           ({ destination, count }) =>
             `${destination.targetRoot}/ (${tr("dap.export.file_count", { count: count ?? 0 })})`
         )
         .join("\n");
-      Blockbench.showMessageBox(
-        {
-          title: tr("dap.export.target_exists"),
-          message: tr("dap.export.target_exists_message", { summary }),
-          icon: "warning",
-          buttons: [tr("dap.export.cancel"), tr("dap.export.overwrite")],
-          confirm: 1,
-          cancel: 0,
-        },
-        (button) => {
-          if (button === 1) write();
-        }
-      );
-    } catch (err) {
+      const overwriteAccepted = await new Promise<boolean>((resolve) => {
+        Blockbench.showMessageBox(
+          {
+            title: tr("dap.export.target_exists"),
+            message: tr("dap.export.target_exists_message", { summary }),
+            icon: "warning",
+            buttons: [tr("dap.export.cancel"), tr("dap.export.overwrite")],
+            confirm: 1,
+            cancel: 0,
+          },
+          (button) => resolve(button === 1)
+        );
+      });
+      if (!overwriteAccepted) {
+        Blockbench.showQuickMessage(tr("dap.export.cancelled"), 2500);
+        return;
+      }
+    }
+
+    try {
+      const count = writeDestinations(destinations, targets);
+      const locations = destinations
+        .map((destination) => `${destination.label}：${destination.targetRoot}/`)
+        .join("\n");
+      const optimization = packReport
+        ? `\n\n${tr("dap.export.optimization", {
+            sampled: packReport.sampledFrames,
+            unique: packReport.uniqueModels,
+            duplicates: packReport.duplicateFrames,
+            before: formatBytes(packReport.modelBytesBefore),
+            after: formatBytes(packReport.modelBytesAfter),
+          })}` +
+          (packReport.omittedUntexturedFaces
+            ? `\n${tr("dap.export.omitted", {
+                faces: packReport.omittedUntexturedFaces,
+                elements: packReport.omittedEmptyElements,
+              })}`
+            : "")
+        : "";
+      const commands = includesDatapack(mode)
+        ? `\n\n${tr("dap.export.commands")}\n/function ${dataNamespace}:give\n/function ${dataNamespace}:play_loop`
+        : "";
       Blockbench.showMessageBox({
-        title: tr("dap.export.prepare_failed"),
-        message: (err as Error).message ?? String(err),
+        title: tr("dap.export.complete"),
+        message: `${tr("dap.export.locations", { count, locations })}${optimization}${commands}`,
+        icon: "check_circle",
+      });
+    } catch (err) {
+      console.error("Export failed", err);
+      Blockbench.showMessageBox({
+        title: tr("dap.export.failed"),
+        message: tr("dap.export.write_error", {
+          error: (err as Error).message ?? String(err),
+        }),
         icon: "error",
       });
     }
-  };
-
-  confirmWarnings(warnings, proceed);
+  } catch (err) {
+    Blockbench.showMessageBox({
+      title: tr("dap.export.prepare_failed"),
+      message: (err as Error).message ?? String(err),
+      icon: "error",
+    });
+  }
 }
 
 export function openExportDialog(): void {
@@ -481,11 +490,18 @@ export function openExportDialog(): void {
     },
     onConfirm(result) {
       exportInProgress = true;
-      try {
-        runExport(result, animation);
-      } finally {
-        exportInProgress = false;
-      }
+      void runExport(result, animation)
+        .catch((err) => {
+          console.error("Unexpected export failure", err);
+          Blockbench.showMessageBox({
+            title: tr("dap.export.failed"),
+            message: (err as Error).message ?? String(err),
+            icon: "error",
+          });
+        })
+        .finally(() => {
+          exportInProgress = false;
+        });
     },
   }).show();
 }

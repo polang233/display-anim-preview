@@ -10,12 +10,17 @@ const entry = `
   } from ${JSON.stringify(
     fileURLToPath(new URL("../src/format.ts", import.meta.url))
   )};
+  import { resolveJavaBlockCodec } from ${JSON.stringify(
+    fileURLToPath(new URL("../src/java-block-codec.ts", import.meta.url))
+  )};
 
   if (FORMAT_COORDINATE_OPTIONS.centered_grid !== false) {
     throw new Error("the plugin format must use the Minecraft non-centered grid");
   }
 
-  globalThis.Codecs = { java_block: { id: "java_block_codec" } };
+  globalThis.Codecs = {
+    java_block: { id: "java_block_codec", compile() { return "{}"; } }
+  };
   globalThis.Formats = { java_block: { codec: globalThis.Codecs.java_block } };
   const translations = {};
   globalThis.Language = {
@@ -71,10 +76,18 @@ const entry = `
     throw new Error("external format name was not restored during unload");
   }
 
+  const retainedBuiltInCodec = globalThis.Formats.java_block.codec;
+  globalThis.Format = { id: "legacy_sequence", codec: null };
+  delete globalThis.Codecs.java_block;
+  if (resolveJavaBlockCodec() !== retainedBuiltInCodec) {
+    throw new Error("legacy-format fallback did not use the retained built-in Java codec");
+  }
+
   process.stdout.write(JSON.stringify({
     ...FORMAT_COORDINATE_OPTIONS,
     standalone: true,
     coexistence: true,
+    legacyCodecFallback: true,
   }));
 `;
 

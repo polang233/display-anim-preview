@@ -1,13 +1,28 @@
 # Java 逐帧显示动画
 
-[English](README.md)
+[English](https://github.com/rieyi/display-anim-preview/blob/main/README.md)
 
 Java 逐帧显示动画是一款 Blockbench 桌面端插件，用于制作 Minecraft Java 版物品逐帧烘焙动画。
 它可以在同一个工程中预览不同物品显示位置，分别决定每个显示位置是否播放动画，并直接导出
 完整资源包与负责驱动帧切换的数据包。
 
-插件可以独立运行，不要求安装 Java Block Sequencer 或其他模型格式插件，也不会注册、覆盖或
-删除其他插件拥有的格式。
+外部插件提供的 `java_block_sequence` 工程已经正常打开时，本插件仍可对它进行预览和包导出。
+插件会自动回退到 Blockbench 保留的内置 Java 编译器，不接管或覆盖外部格式，也不会恢复旧式
+模型序列 ZIP 导出。
+
+## 演示效果
+
+### Blockbench 显示位置动画预览
+
+[![Blockbench 显示位置动画预览](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/blockbench-preview.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/blockbench-preview.mp4)
+
+点击图片播放 MP4 演示。
+
+### Minecraft 游戏内效果
+
+[![Minecraft 游戏内动画效果](https://raw.githubusercontent.com/rieyi/display-anim-preview/main/media/minecraft-result.jpg)](https://github.com/rieyi/display-anim-preview/blob/main/media/minecraft-result.mp4)
+
+点击图片播放 MP4 演示。
 
 ## 主要功能
 
@@ -34,16 +49,18 @@ GitHub Releases 提供两个安装包。两者动画和导出功能完全相同�
 
 | 安装包 | 语言行为 |
 |---|---|
-| 通用语言版 | 以英文为基础；跟随 Blockbench 语言，Blockbench 使用简体中文时自动显示中文 |
-| 简体中文版 | 无论 Blockbench 使用什么语言，插件始终显示简体中文 |
+| [下载通用语言版](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-universal.zip) | 以英文为基础；跟随 Blockbench 语言，Blockbench 使用简体中文时自动显示中文 |
+| [下载简体中文版](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-zh-CN.zip) | 无论 Blockbench 使用什么语言，插件始终显示简体中文 |
 
 Blockbench 官方插件仓库提交的是通用语言版。
+[SHA-256 校验文件](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/SHA256SUMS.txt)
+可用于确认下载文件完整性。
 
 ## 安装方法
 
 ### 从 GitHub Releases 安装
 
-1. 打开仓库的 **Releases** 页面，下载通用语言版或简体中文版 ZIP。
+1. 使用上方链接下载通用语言版或简体中文版 ZIP。
 2. 解压 ZIP，不能直接把 ZIP 当作插件加载。
 3. 在 Blockbench 中打开“**文件 → 插件**”。
 4. 选择“**从文件加载插件**”，打开解压目录中的 `display_anim_preview.js`。
@@ -125,7 +142,8 @@ Blockbench 官方插件仓库提交的是通用语言版。
    记分板名称和播放标签。
 4. 选择父目录。在 macOS 上，目录选择器选择的是已存在的父目录，插件会在其中创建指定包名
    的子目录。
-5. 如果出现帧率、纹理分辨率或模型范围警告，确认结果符合预期后再继续。
+5. 如果存在帧率、纹理分辨率或模型范围问题，插件会把全部警告合并到一个窗口。检查后点击
+   “**仍然导出**”才会开始生成文件；点击取消或关闭窗口时不会生成文件，并会显示“已取消导出”。
 
 默认共用根目录会生成：
 
@@ -135,15 +153,17 @@ Blockbench 官方插件仓库提交的是通用语言版。
 └── datapacks/<包名>/
 ```
 
-导出完成窗口会显示采样帧数、唯一模型数、去重帧数、模型 JSON 体积、忽略的未贴图面、输出
-位置和主要游戏内命令。
+只有出现“**导出完成**”窗口才表示文件已经写入并通过校验。该窗口会显示采样帧数、唯一模型
+数、去重帧数、模型 JSON 体积、忽略的未贴图面、输出位置和主要游戏内命令。
 
 ### 7. 在 Minecraft 中安装和测试
 
 1. 将生成的资源包目录放入 Minecraft `resourcepacks`，或测试服务器配置的资源包位置。
 2. 将生成的数据包目录放入 `<世界目录>/datapacks/`。
-3. 按 `F3+T` 重新加载资源包，并重载数据包或重新打开世界。
-4. 使用导出时填写的数据包命名空间执行：
+3. 进入“**选项 → 资源包**”，将刚放入的资源包移动到“已选”一侧并点击“完成”。仅把目录复制
+   到 `resourcepacks` 或按 `F3+T`，不会自动启用一个尚未选中的资源包。
+4. 资源包已经启用时，重新导出后按 `F3+T` 重载；数据包则重载或重新打开世界。
+5. 使用导出时填写的数据包命名空间执行：
 
 ```mcfunction
 /function <命名空间>:give
@@ -166,10 +186,17 @@ Blockbench 官方插件仓库提交的是通用语言版。
 
 ### 出现黑紫方块
 
+- 先在“选项 → 资源包”确认导出的资源包已经启用。`F3+T` 只重载已启用资源包，不会替你启用
+  新放入目录的资源包。
 - 确认所有可见方块面都已经指定工程纹理。
-- 确认“项目设置”的 UV 分辨率与纹理实际尺寸一致。
+- UV 分辨率不一致通常导致贴图偏移、拉伸或裁切，本身一般不会直接产生黑紫方块；仍应确认
+  “项目设置”的 UV 分辨率与纹理实际尺寸是否符合制作预期。
 - 重新导出后按 `F3+T` 重载资源包；仅退出并重新进入世界不一定会重载资源包。
-- 检查客户端 `latest.log` 中是否存在模型或纹理路径错误。
+- 检查客户端游戏目录的 `logs/latest.log`，而不是服务端日志。资源加载错误通常只在进入世界或
+  `F3+T` 时记录一次，可搜索 `Missing texture`、`Unable to load model`、`Failed to load`、
+  `item_model` 和 `atlas`。
+- 日志的 `Reloading ResourceManager` 列表中应出现导出的资源包；如果只有 `vanilla` 和模组，
+  说明资源包尚未启用。
 
 ### 游戏内位置与显示调整不一致
 
@@ -204,6 +231,7 @@ dist/display_anim_preview.zh-CN.js  简体中文版构建源文件
 
 ## 版权说明
 
-Copyright © 2026 rieyi. All rights reserved. 详见 [COPYRIGHT.md](COPYRIGHT.md)。
+Copyright © 2026 rieyi. All rights reserved. 详见
+[COPYRIGHT.md](https://github.com/rieyi/display-anim-preview/blob/main/COPYRIGHT.md)。
 
 本仓库公开可见，但没有授予开源许可证。
