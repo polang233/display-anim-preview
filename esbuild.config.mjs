@@ -9,6 +9,7 @@ import { build, context } from "esbuild";
 const outfileArgument = process.argv.find((argument) => argument.startsWith("--outfile="));
 const outfile = outfileArgument?.slice("--outfile=".length) || "dist/display_anim_preview.js";
 const forcedLanguage = process.argv.includes("--language=zh") ? '"zh"' : "null";
+const officialRepository = process.argv.includes("--official") ? "true" : "false";
 
 const options = {
   entryPoints: ["src/plugin.ts"],
@@ -20,6 +21,7 @@ const options = {
   legalComments: "none",
   define: {
     __DAP_FORCE_LANGUAGE__: forcedLanguage,
+    __DAP_OFFICIAL_REPOSITORY__: officialRepository,
   },
 };
 

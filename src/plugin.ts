@@ -15,6 +15,8 @@ import {
   unregisterDisplayAnimationProperty,
 } from "./display-animation-settings";
 
+declare const __DAP_OFFICIAL_REPOSITORY__: boolean | undefined;
+
 const OPEN_ACTION_ID = "display_anim_preview_open_action";
 const CHECK_BOUNDS_ACTION_ID = "display_anim_preview_check_bounds";
 const EXPORT_ACTION_ID = "display_anim_preview_export_packs";
@@ -105,13 +107,16 @@ Plugin.register("display_anim_preview", {
     ? "按显示位置预览 Minecraft Java 逐帧烘焙物品动画，并导出完整资源包和动画驱动数据包。"
     : "Preview frame-baked Minecraft Java item animations per display context and export complete " +
       "resource packs and animation-driving datapacks.",
-  about: isChineseOnlyBuild() ? ABOUT_ZH : ABOUT_EN,
+  ...(typeof __DAP_OFFICIAL_REPOSITORY__ !== "undefined" &&
+  __DAP_OFFICIAL_REPOSITORY__
+    ? {}
+    : { about: isChineseOnlyBuild() ? ABOUT_ZH : ABOUT_EN }),
   icon: "icon.png",
   tags: ["Minecraft: Java Edition", "Animation", "Exporter"],
   version: "1.0.0",
   min_version: "5.1.5",
   variant: "desktop",
-  creation_date: "2026-08-03",
+  creation_date: "2026-08-07",
   has_changelog: true,
   repository: "https://github.com/rieyi/display-anim-preview",
   bug_tracker: "https://github.com/rieyi/display-anim-preview/issues",

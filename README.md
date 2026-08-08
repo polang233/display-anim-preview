@@ -236,6 +236,7 @@ npm ci
 npm test
 npm run typecheck
 npm run build:release
+npm run build:official
 ```
 
 Outputs:
@@ -243,10 +244,12 @@ Outputs:
 ```text
 dist/display_anim_preview.js        Universal build
 dist/display_anim_preview.zh-CN.js  Simplified Chinese build source artifact
+dist/display_anim_preview.official.js  Official repository build (About is supplied by about.md)
 ```
 
 The Chinese Release ZIP renames its internal file to `display_anim_preview.js`, because Blockbench
 requires the loaded filename to match the plugin ID.
+The official repository copies `display_anim_preview.official.js` as `display_anim_preview.js`.
 
 ## Copyright
 

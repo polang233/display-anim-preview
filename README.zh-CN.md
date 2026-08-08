@@ -217,6 +217,7 @@ npm ci
 npm test
 npm run typecheck
 npm run build:release
+npm run build:official
 ```
 
 构建结果：
@@ -224,10 +225,12 @@ npm run build:release
 ```text
 dist/display_anim_preview.js        通用语言版
 dist/display_anim_preview.zh-CN.js  简体中文版构建源文件
+dist/display_anim_preview.official.js  官方仓库专用构建（About 由 about.md 提供）
 ```
 
 简体中文 Release ZIP 会把内部插件文件改名为 `display_anim_preview.js`，因为 Blockbench 要求加载
 文件名与插件 ID 一致。
+官方仓库会把 `display_anim_preview.official.js` 复制并命名为 `display_anim_preview.js`。
 
 ## 版权说明
 
