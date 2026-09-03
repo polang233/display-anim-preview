@@ -1,16 +1,23 @@
-/** Builds a complete Minecraft Java resource pack from baked frame models. */
+/** Builds a complete Minecraft Java resource pack from baked animation sequences. */
 
 import type { BakedFrame } from "./bake";
+import { DISPLAY_CONTEXT_PATHS, EXPORT_NAMESPACE } from "./export-layout";
 import { tr } from "./i18n";
 
 const RESOURCE_PACK_FORMAT: [number, number] = [88, 0];
 
 export interface PackOptions {
   packName: string;
-  namespace: string;
-  itemModel: string;
+  projectName: string;
   description: string;
-  displayContexts?: PackDisplayContext[];
+  defaultAnimationKey: string;
+  displayContexts: PackDisplayContext[];
+}
+
+export interface PackAnimationSequence {
+  key: string;
+  sourceName: string;
+  frames: BakedFrame[];
 }
 
 export interface PackDisplayContext {
@@ -26,6 +33,14 @@ export interface PackBuildReport {
   modelBytesAfter: number;
   omittedUntexturedFaces: number;
   omittedEmptyElements: number;
+  animatedContextFolders: string[];
+  animations: PackAnimationReport[];
+}
+
+export interface PackAnimationReport {
+  key: string;
+  sourceName: string;
+  sampledFrames: number;
 }
 
 export interface PackBuildResult {
@@ -47,6 +62,16 @@ interface ExportTexture {
   dataUrl: string;
 }
 
+interface SequenceModelPaths {
+  key: string;
+  sourceName: string;
+  modelPaths: string[];
+}
+
+function json(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
 function sanitizeTextureName(name: string, fallbackIndex: number): string {
   const safe = name
     .replace(/\.png$/i, "")
@@ -56,16 +81,13 @@ function sanitizeTextureName(name: string, fallbackIndex: number): string {
   return safe || `texture_${fallbackIndex}`;
 }
 
-/** Generates a unique file stem so project textures cannot overwrite each other. */
 function collectTextures(): ExportTexture[] {
   const used = new Set<string>();
   return Texture.all.map((texture, index) => {
     const base = sanitizeTextureName(texture.name, index);
     let name = base;
     let suffix = 2;
-    while (used.has(name)) {
-      name = `${base}_${suffix++}`;
-    }
+    while (used.has(name)) name = `${base}_${suffix++}`;
     used.add(name);
     return {
       id: String(texture.id),
@@ -76,16 +98,12 @@ function collectTextures(): ExportTexture[] {
   });
 }
 
-/**
- * Rewrites texture references by matching both compiled keys and values. Matching values is
- * required for aliases such as `particle`, whose key is not itself a texture ID.
- */
 function rewriteTextureRefs(
-  json: string,
-  options: PackOptions,
+  frameJson: string,
+  projectName: string,
   textures: ExportTexture[]
 ): string {
-  const model = JSON.parse(json) as { textures?: Record<string, string> };
+  const model = JSON.parse(frameJson) as { textures?: Record<string, string> };
   if (!model.textures) return JSON.stringify(model);
 
   for (const key of Object.keys(model.textures)) {
@@ -99,9 +117,7 @@ function rewriteTextureRefs(
         candidate.name === key ||
         candidate.name === valueStem
     );
-    if (texture) {
-      model.textures[key] = `${options.namespace}:item/${options.itemModel}/${texture.name}`;
-    }
+    if (texture) model.textures[key] = `${EXPORT_NAMESPACE}:item/${projectName}/${texture.name}`;
   }
   if (!model.textures.particle) {
     const firstTextureKey = Object.keys(model.textures).find(
@@ -112,88 +128,16 @@ function rewriteTextureRefs(
   return JSON.stringify(model);
 }
 
-function animatedModel(modelPaths: string[]): unknown {
-  const uniquePaths = [...new Set(modelPaths)];
-  if (uniquePaths.length === 1) {
-    return { type: "minecraft:model", model: uniquePaths[0] };
-  }
-  const entries = modelPaths.map((model, frame) => ({
-    threshold: frame,
-    model: { type: "minecraft:model", model },
-  }));
-  return {
-    type: "minecraft:range_dispatch",
-    property: "minecraft:custom_model_data",
-    index: 0,
-    fallback: { type: "minecraft:model", model: modelPaths[0] },
-    entries,
-  };
-}
-
-function buildItemDefinition(
-  options: PackOptions,
-  modelPaths: string[]
-): string {
-  if (!modelPaths.length) throw new Error(tr("dap.error.no_models"));
-
-  let model: unknown = animatedModel(modelPaths);
-  if (options.displayContexts?.length) {
-    const cases = options.displayContexts.map((route) => ({
-      when: route.context,
-      model: route.animated
-        ? animatedModel(modelPaths)
-        : { type: "minecraft:model", model: modelPaths[0] },
-    }));
-    model = {
-      type: "minecraft:select",
-      property: "minecraft:display_context",
-      cases,
-      fallback: { type: "minecraft:model", model: modelPaths[0] },
-    };
-  }
-
-  return `${JSON.stringify(
-    {
-      model,
-      // Verified in 26.2: this field prevents equip bobbing on each custom_model_data update.
-      swap_animation_scale: 0,
-    },
-    null,
-    2
-  )}\n`;
-}
-
-function buildPackMcmeta(options: PackOptions): string {
-  return `${JSON.stringify(
-    {
-      pack: {
-        description: options.description,
-        min_format: RESOURCE_PACK_FORMAT,
-        max_format: RESOURCE_PACK_FORMAT,
-      },
-    },
-    null,
-    2
-  )}\n`;
-}
-
-/**
- * Removes untextured faces and elements. Remaining missing or external texture references fail
- * the export because Blockbench's `#missing` sentinel renders as a missing-texture placeholder.
- */
 function sanitizeTextureRefs(
   frameJson: string,
-  options: PackOptions,
+  projectName: string,
   textureNames: Set<string>
 ): { json: string; omittedFaces: number; omittedElements: number } {
   const model = JSON.parse(frameJson) as {
     textures?: Record<string, string>;
-    elements?: Array<{
-      name?: string;
-      faces?: Record<string, { texture?: string }>;
-    }>;
+    elements?: Array<{ name?: string; faces?: Record<string, { texture?: string }> }>;
   };
-  const prefix = `${options.namespace}:item/${options.itemModel}/`;
+  const prefix = `${EXPORT_NAMESPACE}:item/${projectName}/`;
   const textures = model.textures ?? {};
   let omittedFaces = 0;
   let omittedElements = 0;
@@ -213,9 +157,7 @@ function sanitizeTextureRefs(
     const visited = new Set<string>();
     while (value.startsWith("#")) {
       const key = value.slice(1);
-      if (!key || key === "missing" || visited.has(key) || !textures[key]) {
-        return null;
-      }
+      if (!key || key === "missing" || visited.has(key) || !textures[key]) return null;
       visited.add(key);
       value = textures[key];
     }
@@ -224,10 +166,8 @@ function sanitizeTextureRefs(
 
   for (const [key, rawValue] of Object.entries(textures)) {
     const value = resolveTexture(rawValue);
-    if (!value) continue;
-    validateResolvedTexture(value, `#${key}`);
+    if (value) validateResolvedTexture(value, `#${key}`);
   }
-
   for (const element of model.elements ?? []) {
     for (const [faceName, face] of Object.entries(element.faces ?? {})) {
       const value = face.texture ? resolveTexture(face.texture) : null;
@@ -239,7 +179,6 @@ function sanitizeTextureRefs(
       }
     }
   }
-
   if (model.elements) {
     model.elements = model.elements.filter((element) => {
       if (Object.keys(element.faces ?? {}).length) return true;
@@ -247,62 +186,175 @@ function sanitizeTextureRefs(
       return false;
     });
   }
+  return { json: JSON.stringify(model), omittedFaces, omittedElements };
+}
 
+function animatedModel(modelPaths: string[]): unknown {
+  if ([...new Set(modelPaths)].length === 1) {
+    return { type: "minecraft:model", model: modelPaths[0] };
+  }
   return {
-    json: JSON.stringify(model),
-    omittedFaces,
-    omittedElements,
+    type: "minecraft:range_dispatch",
+    property: "minecraft:custom_model_data",
+    index: 0,
+    fallback: { type: "minecraft:model", model: modelPaths[0] },
+    entries: modelPaths.map((model, frame) => ({
+      threshold: frame,
+      model: { type: "minecraft:model", model },
+    })),
   };
 }
 
+function selectableAnimationModel(
+  sequences: SequenceModelPaths[],
+  defaultAnimationKey: string
+): unknown {
+  const fallback = sequences.find((sequence) => sequence.key === defaultAnimationKey);
+  if (!fallback) throw new Error(`Unknown default animation key: ${defaultAnimationKey}`);
+  return {
+    type: "minecraft:select",
+    property: "minecraft:custom_model_data",
+    index: 0,
+    cases: sequences.map((sequence) => ({
+      when: sequence.key,
+      model: animatedModel(sequence.modelPaths),
+    })),
+    fallback: animatedModel(fallback.modelPaths),
+  };
+}
+
+function buildItemDefinition(
+  options: PackOptions,
+  staticModelPath: string,
+  contextSequences: Map<string, SequenceModelPaths[]>
+): string {
+  const staticModel = { type: "minecraft:model", model: staticModelPath };
+  const cases = options.displayContexts.map((route) => ({
+    when: route.context,
+    model: route.animated
+      ? selectableAnimationModel(
+          contextSequences.get(route.context) ?? [],
+          options.defaultAnimationKey
+        )
+      : staticModel,
+  }));
+  return json({
+    model: {
+      type: "minecraft:select",
+      property: "minecraft:display_context",
+      cases,
+      fallback: staticModel,
+    },
+    swap_animation_scale: 0,
+  });
+}
+
 export function buildResourcePack(
-  frames: BakedFrame[],
+  sequences: PackAnimationSequence[],
   options: PackOptions
 ): PackBuildResult {
+  if (!sequences.length || sequences.some((sequence) => !sequence.frames.length)) {
+    throw new Error(tr("dap.error.no_models"));
+  }
+  const keys = new Set<string>();
+  for (const sequence of sequences) {
+    if (!sequence.key || keys.has(sequence.key)) {
+      throw new Error(`Duplicate or empty animation key: ${sequence.key || "<empty>"}`);
+    }
+    keys.add(sequence.key);
+  }
+  if (!keys.has(options.defaultAnimationKey)) {
+    throw new Error(`Unknown default animation key: ${options.defaultAnimationKey}`);
+  }
+
   const files: PackFile[] = [];
-  const assetRoot = `assets/${options.namespace}`;
+  const assetRoot = `assets/${EXPORT_NAMESPACE}`;
+  const modelRoot = `${assetRoot}/models/${options.projectName}`;
   const textures = collectTextures();
   const textureNames = new Set(textures.map((texture) => texture.name));
-  const modelPaths: string[] = [];
   const uniqueModels = new Map<string, string>();
+  const basePaths = new Map<string, string[]>();
   let sampledFrames = 0;
   let modelBytesBefore = 0;
   let modelBytesAfter = 0;
   let omittedUntexturedFaces = 0;
   let omittedEmptyElements = 0;
 
-  files.push({ path: "pack.mcmeta", content: buildPackMcmeta(options) });
-
-  for (const frame of frames) {
-    const rewritten = rewriteTextureRefs(frame.json, options, textures);
-    const sanitized = sanitizeTextureRefs(rewritten, options, textureNames);
-    omittedUntexturedFaces += sanitized.omittedFaces;
-    omittedEmptyElements += sanitized.omittedElements;
-    sampledFrames++;
-    modelBytesBefore += sanitized.json.length;
-
-    let modelPath = uniqueModels.get(sanitized.json);
-    if (!modelPath) {
-      const uniqueIndex = uniqueModels.size;
-      modelPath = `${options.namespace}:item/${options.itemModel}/generated/model_${uniqueIndex}`;
-      uniqueModels.set(sanitized.json, modelPath);
-      modelBytesAfter += sanitized.json.length;
-      files.push({
-        path: `${assetRoot}/models/item/${options.itemModel}/generated/model_${uniqueIndex}.json`,
-        content: `${sanitized.json}\n`,
-      });
-    }
-    modelPaths.push(modelPath);
-  }
-
   files.push({
-    path: `${assetRoot}/items/${options.itemModel}.json`,
-    content: buildItemDefinition(options, modelPaths),
+    path: "pack.mcmeta",
+    content: json({
+      pack: {
+        description: options.description,
+        min_format: RESOURCE_PACK_FORMAT,
+        max_format: RESOURCE_PACK_FORMAT,
+      },
+    }),
   });
 
+  for (const sequence of sequences) {
+    const paths: string[] = [];
+    for (const frame of sequence.frames) {
+      const rewritten = rewriteTextureRefs(frame.json, options.projectName, textures);
+      const sanitized = sanitizeTextureRefs(rewritten, options.projectName, textureNames);
+      omittedUntexturedFaces += sanitized.omittedFaces;
+      omittedEmptyElements += sanitized.omittedElements;
+      sampledFrames++;
+      modelBytesBefore += sanitized.json.length;
+
+      let modelPath = uniqueModels.get(sanitized.json);
+      if (!modelPath) {
+        const index = uniqueModels.size;
+        modelPath = `${EXPORT_NAMESPACE}:${options.projectName}/_generated/model_${index}`;
+        uniqueModels.set(sanitized.json, modelPath);
+        modelBytesAfter += sanitized.json.length;
+        files.push({
+          path: `${modelRoot}/_generated/model_${index}.json`,
+          content: `${sanitized.json}\n`,
+        });
+      }
+      paths.push(modelPath);
+    }
+    basePaths.set(sequence.key, paths);
+  }
+
+  const contextSequences = new Map<string, SequenceModelPaths[]>();
+  const animatedContextFolders: string[] = [];
+  for (const route of options.displayContexts) {
+    if (!route.animated) continue;
+    const shortName = DISPLAY_CONTEXT_PATHS[route.context];
+    if (!shortName) throw new Error(`Unknown display context: ${route.context}`);
+    animatedContextFolders.push(shortName);
+    const routedSequences: SequenceModelPaths[] = [];
+    for (const sequence of sequences) {
+      const paths = basePaths.get(sequence.key)!;
+      const aliases = paths.map((parent, frame) => {
+        const alias = `${EXPORT_NAMESPACE}:${options.projectName}/${sequence.key}/${shortName}/${frame}`;
+        const content = json({ parent });
+        modelBytesAfter += content.length;
+        files.push({
+          path: `${modelRoot}/${sequence.key}/${shortName}/${frame}.json`,
+          content,
+        });
+        return alias;
+      });
+      routedSequences.push({
+        key: sequence.key,
+        sourceName: sequence.sourceName,
+        modelPaths: aliases,
+      });
+    }
+    contextSequences.set(route.context, routedSequences);
+  }
+
+  const defaultPath = basePaths.get(options.defaultAnimationKey)?.[0];
+  if (!defaultPath) throw new Error(tr("dap.error.no_models"));
+  files.push({
+    path: `${assetRoot}/items/${options.projectName}.json`,
+    content: buildItemDefinition(options, defaultPath, contextSequences),
+  });
   for (const texture of textures) {
     files.push({
-      path: `${assetRoot}/textures/item/${options.itemModel}/${texture.name}.png`,
+      path: `${assetRoot}/textures/item/${options.projectName}/${texture.name}.png`,
       content: texture.dataUrl,
       isImage: true,
     });
@@ -318,6 +370,12 @@ export function buildResourcePack(
       modelBytesAfter,
       omittedUntexturedFaces,
       omittedEmptyElements,
+      animatedContextFolders,
+      animations: sequences.map((sequence) => ({
+        key: sequence.key,
+        sourceName: sequence.sourceName,
+        sampledFrames: sequence.frames.length,
+      })),
     },
   };
 }

@@ -50,6 +50,20 @@ declare global {
     box_uv?: boolean;
     optional_box_uv?: boolean;
     single_texture?: boolean;
+    render_sides?: "front" | "double" | "auto";
+    model_identifier?: boolean;
+    parent_model_id?: boolean;
+    vertex_color_ambient_occlusion?: boolean;
+    uv_rotation?: boolean;
+    java_cube_shading_properties?: boolean;
+    java_face_properties?: boolean;
+    cullfaces?: boolean;
+    animated_textures?: boolean;
+    select_texture_for_particles?: boolean;
+    texture_mcmeta?: boolean;
+    texture_folder?: boolean;
+    animation_controllers?: boolean;
+    animation_files?: boolean;
     bone_rig?: boolean;
     centered_grid?: boolean;
     rotate_cubes?: boolean;
@@ -63,6 +77,8 @@ declare global {
     id: string;
     name: string;
     codec?: { compile?(options?: { prevent_dialog?: boolean }): string } | null;
+    new?(): boolean;
+    select?(): void;
     delete(): void;
   }
 
@@ -72,6 +88,9 @@ declare global {
 
   const Formats: Record<string, ModelFormatInstance | undefined>;
   const Format: ModelFormatInstance;
+  const Canvas: {
+    updateAll(): void;
+  };
 
   interface PropertyInstance {
     delete(): void;
@@ -92,7 +111,20 @@ declare global {
     ): PropertyInstance;
   };
 
+  interface ModelProjectInstance {
+    uuid: string;
+    name: string;
+    format?: ModelFormatInstance;
+    saved: boolean;
+    save_path?: string;
+    export_path?: string;
+    select(): boolean;
+    close(force?: boolean): Promise<boolean>;
+  }
+
   const ModelProject: {
+    new (options?: { format?: ModelFormatInstance }, uuid?: string): ModelProjectInstance;
+    all: ModelProjectInstance[];
     properties?: Record<string, PropertyInstance>;
   };
 
@@ -124,6 +156,8 @@ declare global {
     on(event: string, callback: (data?: unknown) => void): void;
     removeListener(event: string, callback: (data?: unknown) => void): void;
     showQuickMessage(message: string, ms?: number): void;
+    setProgress(progress: number, time?: number, statusBar?: boolean): void;
+    setStatusBarText(text?: string): void;
     showMessageBox(
       options: {
         title: string;
@@ -175,6 +209,9 @@ declare global {
     readdirSync(path: string, options: { withFileTypes: true }): NodeDirent[];
     readFileSync(path: string, encoding: "utf8"): string;
     unlinkSync(path: string): void;
+    rmdirSync(path: string): void;
+    renameSync(oldPath: string, newPath: string): void;
+    rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
   }
   interface NodePath {
     join(...parts: string[]): string;
@@ -182,7 +219,7 @@ declare global {
     basename(path: string): string;
   }
   function requireNativeModule(
-    module: "fs" | "path",
+    module: "fs" | "path" | "clipboard",
     options?: { scope?: string; message?: string; show_permission_dialog?: boolean }
   ): unknown;
 
@@ -206,15 +243,17 @@ declare global {
 
   interface BoneAnimatorInstance {
     channels: { rotation?: unknown; position?: unknown; scale?: unknown };
-    keyframes?: unknown[];
+    keyframes?: KeyframeInstance[];
+    select(): BoneAnimatorInstance;
     interpolate(channel: "rotation" | "position" | "scale"): number[] | null;
   }
 
   interface AnimationInstance {
     uuid: string;
     name: string;
+    selected: boolean;
     length: number;
-    playing: boolean;
+    playing: false | true | "locked";
     /** Animation FPS grid used by frame baking. */
     snapping: number;
     /** Molang expression string when set; used as a blend multiplier. */
@@ -258,14 +297,33 @@ declare global {
     to?: number[];
     origin?: number[];
     rotation?: number[];
+    inflate?: number;
     export?: boolean;
     visibility?: boolean;
+    selected: boolean;
     mesh: THREE_Object3D;
     constructor: { animator?: unknown };
     getTypeBehavior(behavior: string): boolean;
   }
 
-  const Outliner: { elements: OutlinerNodeLike[] };
+  const Outliner: { root: OutlinerNodeLike[]; elements: OutlinerNodeLike[]; selected: OutlinerNodeLike[] };
+  function unselectAllElements(): void;
+  function updateSelection(): void;
+
+  interface KeyframeInstance {
+    time: number;
+    channel: string;
+    selected: boolean;
+    animator: BoneAnimatorInstance;
+    interpolation?: string;
+    data_points?: unknown[];
+    bezier_left_time?: number[];
+    bezier_left_value?: number[];
+    bezier_right_time?: number[];
+    bezier_right_value?: number[];
+    select(): KeyframeInstance;
+  }
+  const Keyframe: { selected: KeyframeInstance[] };
 
   const Cube: { all: OutlinerNodeLike[] };
 
@@ -310,6 +368,11 @@ declare global {
 
   const Codecs: {
     java_block?: { compile(options?: { prevent_dialog?: boolean }): string };
+    project: {
+      compile(options?: Record<string, unknown>): Record<string, unknown>;
+      parse(model: Record<string, unknown>, path?: string): void;
+    };
+    [key: string]: { compile?(options?: { prevent_dialog?: boolean }): string } | unknown;
   };
 
   const Timeline: {
@@ -410,10 +473,21 @@ declare global {
     appendChild(node: HTMLElementLike): void;
     style: Record<string, string>;
     remove(): void;
+    blur(): void;
     innerHTML: string;
     innerText: string;
     title: string;
     onclick: (() => void) | null;
+    onmouseenter: (() => void) | null;
+    onmouseleave: (() => void) | null;
+    className: string;
+    id: string;
+    dataset: Record<string, string | undefined>;
+    parentElement: HTMLElementLike | null;
+    click(): void;
+    addEventListener(event: string, callback: () => void): void;
+    querySelector(selector: string): HTMLElementLike | null;
+    querySelectorAll(selector: string): HTMLElementLike[];
   }
 
   interface InputEventLike {
@@ -432,6 +506,8 @@ declare global {
     min: string;
     max: string;
     step: string;
+    placeholder: string;
+    disabled: boolean;
     oninput: ((event: InputEventLike) => void) | null;
     onchange: ((event: InputEventLike) => void) | (() => void) | null;
   }
@@ -440,22 +516,33 @@ declare global {
     value: string;
   }
 
+  interface HTMLTextAreaElementLike extends HTMLElementLike {
+    value: string;
+    readOnly: boolean;
+  }
+
   interface Document {
+    body: HTMLElementLike;
+    activeElement: HTMLElementLike | null;
+    querySelector(selector: string): HTMLElementLike | null;
     createElement(tag: "input"): HTMLInputElementLike;
     createElement(tag: "select"): HTMLSelectElementLike;
     createElement(tag: "option"): HTMLOptionElementLike;
+    createElement(tag: "textarea"): HTMLTextAreaElementLike;
     createElement(tag: string): HTMLElementLike;
   }
   const document: Document;
 
   function requestAnimationFrame(cb: (timestamp: number) => void): number;
   function cancelAnimationFrame(handle: number): void;
+  function setTimeout(callback: () => void, delay: number): number;
   function setInterval(callback: () => void, delay: number): number;
   function clearInterval(handle: number): void;
 
   interface PanelOptions {
     name: string;
     icon: string;
+    condition?: { modes?: string[]; formats?: string[]; features?: string[] };
     growable?: boolean;
     resizable?: boolean;
     default_position?: { slot: string; height: number; width: number; float_position?: [number, number]; float_size?: [number, number] };
@@ -465,6 +552,7 @@ declare global {
   class Panel {
     constructor(id: string, options: PanelOptions);
     node: HTMLElementLike;
+    update(): void;
     delete(): void;
   }
 
@@ -475,11 +563,13 @@ declare global {
    */
   interface DialogFormField {
     label?: string;
-    type?: "text" | "number" | "select" | "checkbox" | "info";
+    type?: "text" | "number" | "select" | "checkbox" | "info" | "buttons";
     value?: string | number | boolean;
     text?: string;
     list?: string[];
     options?: Record<string, string>;
+    buttons?: string[];
+    click?(index: number): void;
     min?: number;
     max?: number;
     step?: number;
@@ -490,13 +580,14 @@ declare global {
   interface DialogOptions<T> {
     title: string;
     form?: Record<string, DialogFormField>;
-    onConfirm?(result: T): void;
+    onConfirm?(result: T): boolean | void;
     onCancel?(): void;
   }
 
   class Dialog<T = Record<string, never>> {
     constructor(id: string, options: DialogOptions<T>);
     show(): void;
+    setFormValues(values: Record<string, string | number | boolean>): void;
     delete(): void;
   }
 }

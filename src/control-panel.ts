@@ -8,11 +8,14 @@ import {
   isLooping,
   isLowFpsPreview,
   setLowFpsPreview,
+  getPreviewFps,
+  setPreviewFps,
   seekTo,
   setTickCallback,
   stop,
   selectAnimationAndReset,
   isCurrentDisplayAnimationEnabled,
+  selectPreviewAnimation,
 } from "./playback";
 import {
   getDisplayAnimationEnabled,
@@ -26,9 +29,12 @@ let sliderEl: HTMLInputElementLike | null = null;
 let timeLabelEl: HTMLElementLike | null = null;
 let playButtonEl: HTMLElementLike | null = null;
 let animatedCheckboxEl: HTMLInputElementLike | null = null;
+let animationSelectEl: HTMLSelectElementLike | null = null;
 let animationSwitchRowEl: HTMLElementLike | null = null;
 let slotMonitorTimer: number | null = null;
 let observedSlot = "";
+let observedAnimationUuid = "";
+let observedAnimationList = "";
 
 const SLOT_LABELS: Record<string, string> = {
   thirdperson_righthand: "dap.slot.thirdperson_righthand",
@@ -45,6 +51,19 @@ const SLOT_LABELS: Record<string, string> = {
 
 function formatTime(t: number): string {
   return t.toFixed(2) + "s";
+}
+
+function styleInputControl(input: HTMLInputElementLike): void {
+  input.style.background = "var(--color-back)";
+  input.style.color = "var(--color-text)";
+  input.style.border = "1px solid var(--color-border)";
+  input.style.borderRadius = "0";
+  input.style.padding = "4px 7px";
+  input.style.boxSizing = "border-box";
+  input.style.outline = "none";
+  const focusable = input as unknown as { onfocus: () => void; onblur: () => void };
+  focusable.onfocus = () => { input.style.borderColor = "var(--color-accent)"; };
+  focusable.onblur = () => { input.style.borderColor = "var(--color-border)"; };
 }
 
 function updateControlsUI(time: number, length: number, playing: boolean): void {
@@ -92,9 +111,68 @@ function syncDisplayControls(force = false): void {
   enforceCurrentDisplayAnimationPolicy();
 }
 
+function syncAnimationControl(): void {
+  const listSignature = Animation.all.map((animation) => `${animation.uuid}\u0000${animation.name}`).join("\u0001");
+  if (animationSelectEl && listSignature !== observedAnimationList) {
+    animationSelectEl.innerHTML = "";
+    for (const animation of Animation.all) {
+      const option = document.createElement("option");
+      option.value = animation.uuid;
+      option.innerText = animation.name;
+      animationSelectEl.appendChild(option);
+    }
+    observedAnimationList = listSignature;
+  }
+  const selectedUuid = Animation.selected?.uuid ?? "";
+  if (selectedUuid === observedAnimationUuid) return;
+  observedAnimationUuid = selectedUuid;
+  if (animationSelectEl) animationSelectEl.value = selectedUuid;
+  const animation = Animation.selected;
+  if (animation) updateControlsUI(Math.min(Timeline.time, animation.length), animation.length, Timeline.playing);
+}
+
 function startSlotMonitor(): void {
   if (slotMonitorTimer !== null) return;
-  slotMonitorTimer = setInterval(() => syncDisplayControls(), 150);
+  slotMonitorTimer = setInterval(() => {
+    syncDisplayControls();
+    syncAnimationControl();
+  }, 150);
+}
+
+
+function buildAnimationPicker(container: HTMLElementLike): void {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.gap = "6px";
+  row.style.padding = "4px 0";
+  row.style.flexWrap = "wrap";
+
+  const label = document.createElement("span");
+  label.innerText = tr("dap.panel.animation");
+  label.style.fontSize = "11px";
+  label.style.whiteSpace = "nowrap";
+
+  const select = document.createElement("select");
+  select.style.flex = "1 1 150px";
+  select.style.minWidth = "0";
+  for (const animation of Animation.all) {
+    const option = document.createElement("option");
+    option.value = animation.uuid;
+    option.innerText = animation.name;
+    select.appendChild(option);
+  }
+  observedAnimationList = Animation.all.map((animation) => `${animation.uuid}\u0000${animation.name}`).join("\u0001");
+  select.value = Animation.selected?.uuid ?? "";
+  observedAnimationUuid = select.value;
+  select.onchange = (event) => {
+    const animation = selectPreviewAnimation(event.target.value);
+    observedAnimationUuid = animation?.uuid ?? "";
+  };
+  animationSelectEl = select;
+  row.appendChild(label);
+  row.appendChild(select);
+  container.appendChild(row);
 }
 
 function stopSlotMonitor(): void {
@@ -187,7 +265,8 @@ function buildTransportControls(container: HTMLElementLike): void {
   buttonGroup.style.display = "flex";
   buttonGroup.style.alignItems = "center";
   buttonGroup.style.gap = "6px";
-  buttonGroup.style.flex = "0 0 auto";
+  buttonGroup.style.flex = "1 1 100%";
+  buttonGroup.style.flexWrap = "wrap";
 
   const playButton = document.createElement("button");
   playButton.innerHTML = '<i class="material-icons">play_arrow</i>';
@@ -217,6 +296,29 @@ function buildTransportControls(container: HTMLElementLike): void {
     setLowFpsPreview(!isLowFpsPreview());
     lowFpsButton.style.opacity = isLowFpsPreview() ? "1" : "0.4";
   };
+
+  const fpsGroup = document.createElement("label");
+  fpsGroup.style.display = "flex";
+  fpsGroup.style.alignItems = "center";
+  fpsGroup.style.gap = "4px";
+  fpsGroup.style.fontSize = "11px";
+  fpsGroup.style.whiteSpace = "nowrap";
+  fpsGroup.style.flex = "1 1 118px";
+  fpsGroup.innerText = tr("dap.panel.preview_fps");
+
+  const fpsInput = document.createElement("input");
+  fpsInput.type = "number";
+  fpsInput.min = "1";
+  fpsInput.max = "20";
+  fpsInput.step = "1";
+  fpsInput.value = String(getPreviewFps());
+  fpsInput.title = tr("dap.panel.preview_fps_hint");
+  fpsInput.style.width = "48px";
+  styleInputControl(fpsInput);
+  fpsInput.onchange = () => {
+    fpsInput.value = String(setPreviewFps(parseFloat(fpsInput.value)));
+  };
+  fpsGroup.appendChild(fpsInput);
 
   const scrubGroup = document.createElement("div");
   scrubGroup.style.display = "flex";
@@ -251,6 +353,7 @@ function buildTransportControls(container: HTMLElementLike): void {
   buttonGroup.appendChild(playButton);
   buttonGroup.appendChild(loopButton);
   buttonGroup.appendChild(lowFpsButton);
+  buttonGroup.appendChild(fpsGroup);
   scrubGroup.appendChild(slider);
   scrubGroup.appendChild(timeLabel);
   bar.appendChild(buttonGroup);
@@ -277,6 +380,7 @@ export function openControlPanel(): void {
   wrapper.style.padding = "0 4px 4px";
   wrapper.style.minWidth = "0";
   buildSlotPicker(wrapper);
+  buildAnimationPicker(wrapper);
   buildAnimationSwitch(wrapper);
   buildTransportControls(wrapper);
 
@@ -286,7 +390,7 @@ export function openControlPanel(): void {
     growable: true,
     resizable: true,
     // Leave enough height for a third wrapped row.
-    default_position: { slot: "left_bar", height: 165, width: 320 },
+    default_position: { slot: "left_bar", height: 205, width: 340 },
   });
   panel.node.appendChild(wrapper);
 
@@ -311,6 +415,9 @@ export function disposeControlPanel(): void {
   timeLabelEl = null;
   playButtonEl = null;
   animatedCheckboxEl = null;
+  animationSelectEl = null;
   animationSwitchRowEl = null;
   observedSlot = "";
+  observedAnimationUuid = "";
+  observedAnimationList = "";
 }

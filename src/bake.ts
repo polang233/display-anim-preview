@@ -5,15 +5,15 @@ import {
 } from "./display-snapshot";
 import { tr } from "./i18n";
 import { resolveJavaBlockCodec } from "./java-block-codec";
+import { assertBoundsTaskActive, type BoundsTaskControl, yieldBoundsTask } from "./bounds-task";
 
 /**
- * Bakes skeletal animation into flat Java block models. Transform accumulation mirrors
- * Blockbench's bake action, and Group.resolve() performs hierarchy flattening. Every frame runs
- * inside an Undo transaction that is cancelled immediately so project data and history survive.
- * The `animations` aspect is mandatory because keyframes belong to group animators.
+ * 把骨骼动画烘焙为扁平 Java 方块模型。变换累加与 Blockbench 烘焙动作一致，并由
+ * Group.resolve() 展平层级。每帧都在随即取消的 Undo 事务中执行，以保护工程数据和历史。
+ * `animations` 快照不可省略，因为关键帧属于 Group 动画器。
  */
 
-/** A cube coordinate outside Minecraft's model limits. */
+/** 超出 Minecraft 模型限制的方块坐标。 */
 export interface OutOfBoundsHit {
   frame: number;
   elementIndex: number;
@@ -21,17 +21,27 @@ export interface OutOfBoundsHit {
   axis: "x" | "y" | "z";
   field: "from" | "to";
   value: number;
+  /** 尽可能映射回层级展平前的大纲元素。 */
+  sourceElementUuid?: string;
+  /** 从近到远的源父 Group，用于查找产生影响的关键帧。 */
+  sourceGroupUuids?: string[];
 }
 
 export interface BakedFrame {
   frame: number;
-  /** Compiled Java model JSON produced by Blockbench's codec. */
+  /** Blockbench codec 生成的 Java 模型 JSON。 */
   json: string;
 }
 
 export interface BakeResult {
   frames: BakedFrame[];
   outOfBounds: OutOfBoundsHit[];
+}
+
+export interface BakedAnimationSequence extends BakeResult {
+  sourceUuid: string;
+  sourceName: string;
+  key: string;
 }
 
 function snapshotCompiledDisplay(): CompiledDisplay | undefined {
@@ -46,41 +56,34 @@ function snapshotCompiledDisplay(): CompiledDisplay | undefined {
   }
 }
 
-/** Minecraft's Java model coordinate limits, verified from the built-in java_block format. */
+/** 从内置 java_block 格式核实的 Minecraft Java 模型坐标限制。 */
 const COORDINATE_MIN = -16;
 const COORDINATE_MAX = 32;
 
 const AXIS_NAMES: Array<"x" | "y" | "z"> = ["x", "y", "z"];
 
-/**
- * Accumulates animation offsets at the current timeline position into static node data.
- */
-function applyAnimatedOffsets(node: OutlinerNodeLike): void {
+/** 把当前时间轴位置的动画偏移累加到静态节点数据。 */
+function applyAnimatedOffsets(node: OutlinerNodeLike, animation: Animation): void {
   const offsetRotation: [number, number, number] = [0, 0, 0];
   const offsetPosition: [number, number, number] = [0, 0, 0];
 
-  for (const animation of Animator.animations) {
-    if (!animation.playing) continue;
-    const animator = animation.getBoneAnimator(node);
-    if (!animator) continue;
-    // This format supports group-driven skeletal animation only.
-    if (!(node instanceof Group)) continue;
+  const animator = animation.getBoneAnimator(node);
+  if (!animator || !(node instanceof Group)) return;
 
-    const multiplier = animation.blend_weight
-      ? Math.max(Animator.MolangParser.parse(animation.blend_weight), 0)
-      : 1;
+  const multiplier = animation.blend_weight
+    ? Math.max(Animator.MolangParser.parse(animation.blend_weight), 0)
+    : 1;
 
-    if (animator.channels.rotation) {
-      const rotation = animator.interpolate("rotation");
-      if (rotation instanceof Array) {
-        offsetRotation.V3_add(rotation.map((v) => v * multiplier));
-      }
+  if (animator.channels.rotation) {
+    const rotation = animator.interpolate("rotation");
+    if (rotation instanceof Array) {
+      offsetRotation.V3_add(rotation.map((v) => v * multiplier));
     }
-    if (animator.channels.position) {
-      const position = animator.interpolate("position");
-      if (position instanceof Array) {
-        offsetPosition.V3_add(position.map((v) => v * multiplier));
-      }
+  }
+  if (animator.channels.position) {
+    const position = animator.interpolate("position");
+    if (position instanceof Array) {
+      offsetPosition.V3_add(position.map((v) => v * multiplier));
     }
   }
 
@@ -93,7 +96,7 @@ function applyAnimatedOffsets(node: OutlinerNodeLike): void {
   applyPositionOffset(node, offsetPosition);
 }
 
-/** Translates every coordinate in a node subtree. */
+/** 平移节点子树中的全部坐标。 */
 function applyPositionOffset(node: OutlinerNodeLike, offset: [number, number, number]): void {
   if (node instanceof Group) {
     node.origin?.V3_add(offset);
@@ -109,9 +112,7 @@ function applyPositionOffset(node: OutlinerNodeLike, offset: [number, number, nu
   }
 }
 
-/**
- * Resolves top-level groups repeatedly until the complete hierarchy is flat.
- */
+/** 反复解析顶层 Group，直到整个层级完全展平。 */
 function flattenHierarchy(): void {
   for (let round = 0; round < 100; round++) {
     const topLevel = Group.all.filter((group) => !(group.parent instanceof Group));
@@ -132,9 +133,7 @@ function belongsToRoot(node: OutlinerNodeLike, rootGroupUuid: string): boolean {
   return false;
 }
 
-/**
- * Temporarily excludes elements outside the selected top-level groups; Undo restores flags.
- */
+/** 临时排除所选顶层 Group 之外的元素；相关标记由 Undo 恢复。 */
 function restrictExportToRoot(rootGroupUuid?: string): void {
   if (!rootGroupUuid) return;
   for (const element of Outliner.elements) {
@@ -144,8 +143,12 @@ function restrictExportToRoot(rootGroupUuid?: string): void {
   }
 }
 
-/** Scans a compiled frame for coordinates outside Minecraft limits. */
-function collectOutOfBounds(frame: number, json: string): OutOfBoundsHit[] {
+/** 扫描编译帧中超出 Minecraft 限制的坐标。 */
+function collectOutOfBounds(
+  frame: number,
+  json: string,
+  sources: Array<{ elementUuid: string; groupUuids: string[] }>
+): OutOfBoundsHit[] {
   const hits: OutOfBoundsHit[] = [];
   let parsed: { elements?: Array<{ name?: string; from: number[]; to: number[] }> };
   try {
@@ -172,6 +175,8 @@ function collectOutOfBounds(frame: number, json: string): OutOfBoundsHit[] {
           axis: AXIS_NAMES[axis] ?? "x",
           field,
           value,
+          sourceElementUuid: sources[elementIndex]?.elementUuid,
+          sourceGroupUuids: sources[elementIndex]?.groupUuids,
         });
       });
     }
@@ -179,7 +184,7 @@ function collectOutOfBounds(frame: number, json: string): OutOfBoundsHit[] {
   return hits;
 }
 
-/** Total keyframe count used as a rollback integrity guard. */
+/** 用作回滚完整性防线的关键帧总数。 */
 function countKeyframes(): number {
   let total = 0;
   for (const animation of Animation.all) {
@@ -191,35 +196,90 @@ function countKeyframes(): number {
   return total;
 }
 
+function modelStructureSignature(): string {
+  const elements = Outliner.elements.map((element) => element.uuid).sort();
+  const groups = Group.all.map((group) => group.uuid).sort();
+  return `${elements.join(",")}|${groups.join(",")}`;
+}
+
+function safelyCancelBakeEdit(token: unknown): void {
+  if (Undo.current_save !== token) {
+    throw new Error("Blockbench changed the active edit while restoring a baked frame.");
+  }
+  const previewDescriptor = Object.getOwnPropertyDescriptor(Animator, "preview");
+  if (!previewDescriptor?.configurable) {
+    throw new Error("Blockbench does not allow a safe animation-preview restore in this version.");
+  }
+  try {
+    Object.defineProperty(Animator, "preview", {
+      configurable: true,
+      value: () => {},
+    });
+    Undo.cancelEdit(true);
+  } finally {
+    Object.defineProperty(Animator, "preview", previewDescriptor);
+  }
+  if (Undo.current_save) {
+    throw new Error("Blockbench did not finish restoring the baked frame.");
+  }
+}
+
 /**
- * Bakes `frameCount` frames at the requested FPS and restores timeline, selection, playback,
- * model data, and undo history afterward.
+ * 按指定 FPS 烘焙 `frameCount` 帧，并在结束后恢复时间轴、选择、播放、模型数据和 Undo 历史。
  */
-export function bakeFrames(
+function* bakeFrameSteps(
+  animation: Animation,
   frameCount: number,
   fps: number,
-  rootGroupUuid?: string
-): BakeResult {
+  rootGroupUuid?: string,
+  collectBounds = true
+): Generator<{ frame: number; total: number }, BakeResult, void> {
+  if (Undo.current_save) {
+    throw new Error(tr("dap.bake.active_edit"));
+  }
   const frames: BakedFrame[] = [];
   const outOfBounds: OutOfBoundsHit[] = [];
 
   const originalTime = Timeline.time;
-  const originalAnimation = Animation.selected;
+  const sourceAnimationUuid = animation.uuid;
+  const originalAnimationUuid = Animation.selected?.uuid;
   const playingStates = Animation.all.map((animation) => ({
-    animation,
+    uuid: animation.uuid,
     playing: animation.playing,
   }));
   const originalSaved = Project?.saved;
   const keyframesBefore = countKeyframes();
+  const structureBefore = modelStructureSignature();
   const originalModeId = Modes.selected.id;
   const displaySnapshot = snapshotCompiledDisplay();
+  const sourceGroups = new Map<string, string[]>();
+  if (collectBounds) {
+    for (const element of Outliner.elements) {
+      const groupUuids: string[] = [];
+      let parent = element.parent;
+      while (parent && parent !== "root") {
+        if (parent instanceof Group) groupUuids.push(parent.uuid);
+        parent = parent.parent;
+      }
+      sourceGroups.set(element.uuid, groupUuids);
+    }
+  }
 
   try {
     // Interpolation returns no vectors outside animation mode, so baking must switch explicitly.
     Modes.options.animate?.select();
-    originalAnimation?.select();
+    for (const state of playingStates) {
+      const current = Animation.all.find((item) => item.uuid === state.uuid);
+      if (current) current.playing = false;
+    }
+    const initialTarget = Animation.all.find((item) => item.uuid === sourceAnimationUuid);
+    if (!initialTarget) throw new Error(`Animation ${sourceAnimationUuid} is no longer available.`);
+    initialTarget.select();
+    initialTarget.playing = true;
 
     for (let frame = 0; frame < frameCount; frame++) {
+      const targetAnimation = Animation.all.find((item) => item.uuid === sourceAnimationUuid);
+      if (!targetAnimation) throw new Error(`Animation ${sourceAnimationUuid} disappeared during baking.`);
       Timeline.setTime(frame / fps);
       Animator.preview();
 
@@ -237,30 +297,48 @@ export function bakeFrames(
           (element) => element.constructor.animator
         );
         for (const node of [...Group.all, ...animatableElements]) {
-          applyAnimatedOffsets(node);
+          applyAnimatedOffsets(node, targetAnimation);
         }
         flattenHierarchy();
+
+        const compiledSources = collectBounds
+          ? Outliner.elements
+              .filter((element) => element.export !== false)
+              .map((element) => ({
+                elementUuid: element.uuid,
+                groupUuids: sourceGroups.get(element.uuid) ?? [],
+              }))
+          : [];
 
         const json = applyCompiledDisplaySnapshot(
           resolveJavaBlockCodec().compile({ prevent_dialog: true }),
           displaySnapshot
         );
         frames.push({ frame, json });
-        outOfBounds.push(...collectOutOfBounds(frame, json));
+        if (collectBounds) {
+          outOfBounds.push(...collectOutOfBounds(frame, json, compiledSources));
+        }
       } finally {
-        // Cancel only the transaction opened by this function.
-        if (Undo.current_save === token) {
-          Undo.cancelEdit(true);
+        safelyCancelBakeEdit(token);
+        if (modelStructureSignature() !== structureBefore) {
+          throw new Error("Blockbench did not restore the model hierarchy after checking a frame.");
         }
       }
+      yield { frame: frame + 1, total: frameCount };
     }
   } finally {
-    Timeline.setTime(originalTime);
+    for (const item of Animation.all) item.selected = false;
+    const originalAnimation = originalAnimationUuid
+      ? Animation.all.find((item) => item.uuid === originalAnimationUuid) ?? null
+      : null;
+    Animation.selected = originalAnimation;
+    if (originalAnimation) originalAnimation.selected = true;
     for (const state of playingStates) {
-      state.animation.playing = state.playing;
+      const current = Animation.all.find((item) => item.uuid === state.uuid);
+      if (current) current.playing = state.playing;
     }
-    originalAnimation?.select();
     Modes.options[originalModeId]?.select();
+    Timeline.setTime(originalTime);
     Animator.preview();
     if (Project && originalSaved !== undefined) {
       Project.saved = originalSaved;
@@ -283,12 +361,71 @@ export function bakeFrames(
         icon: "error",
       });
     }
+    if (modelStructureSignature() !== structureBefore) {
+      console.error("Bake rollback incomplete: model hierarchy changed during baking");
+    }
   }
 
   return { frames, outOfBounds };
 }
 
-/** Calculates frame count for a duration and FPS, including both endpoints. */
+export function bakeFrames(
+  animation: Animation,
+  frameCount: number,
+  fps: number,
+  rootGroupUuid?: string
+): BakeResult {
+  const generator = bakeFrameSteps(animation, frameCount, fps, rootGroupUuid);
+  while (true) {
+    const step = generator.next();
+    if (step.done) return step.value;
+  }
+}
+
+/** 供可取消隔离范围检测使用的异步逐帧烘焙。 */
+export async function bakeFramesAsync(
+  animation: Animation,
+  frameCount: number,
+  fps: number,
+  control: BoundsTaskControl,
+  onFrame?: (frame: number, total: number) => void,
+  rootGroupUuid?: string,
+  collectBounds = true
+): Promise<BakeResult> {
+  const generator = bakeFrameSteps(animation, frameCount, fps, rootGroupUuid, collectBounds);
+  let completed = false;
+  try {
+    while (true) {
+      assertBoundsTaskActive(control);
+      const step = generator.next();
+      if (step.done) {
+        completed = true;
+        return step.value;
+      }
+      onFrame?.(step.value.frame, step.value.total);
+      await yieldBoundsTask();
+    }
+  } finally {
+    if (!completed) generator.return({ frames: [], outOfBounds: [] });
+  }
+}
+
+export function bakeAnimationSequence(
+  animation: Animation,
+  key: string,
+  frameCount: number,
+  fps: number
+): BakedAnimationSequence {
+  const result = bakeFrames(animation, frameCount, fps);
+  return {
+    sourceUuid: animation.uuid,
+    sourceName: animation.name,
+    key,
+    ...result,
+  };
+}
+
+/** 根据时长和 FPS 计算包含首尾端点的帧数。 */
 export function frameCountFor(length: number, fps: number): number {
   return Math.floor(length * fps) + 1;
 }

@@ -4,7 +4,12 @@ import type { OutOfBoundsHit } from "./bake";
 import { tr } from "./i18n";
 
 /** Groups hits by frame so large reports remain readable. */
-function summarizeByFrame(hits: OutOfBoundsHit[]): string[] {
+export interface OutOfBoundsFrameSummary {
+  frame: number;
+  description: string;
+}
+
+export function summarizeOutOfBoundsByFrame(hits: OutOfBoundsHit[]): OutOfBoundsFrameSummary[] {
   const byFrame = new Map<number, OutOfBoundsHit[]>();
   for (const hit of hits) {
     const list = byFrame.get(hit.frame);
@@ -28,13 +33,13 @@ function summarizeByFrame(hits: OutOfBoundsHit[]): string[] {
           count: names.length,
         })
       : names.join(", ");
-    return tr("dap.bounds.frame", {
+    return { frame, description: tr("dap.bounds.frame", {
       frame,
       parts: nameList,
       field: worst.field,
       axis: worst.axis,
       value: worst.value.toFixed(2),
-    });
+    }) };
   });
 }
 
@@ -42,7 +47,7 @@ function summarizeByFrame(hits: OutOfBoundsHit[]): string[] {
 export function describeOutOfBounds(hits: OutOfBoundsHit[]): string | null {
   if (!hits.length) return null;
 
-  const lines = summarizeByFrame(hits);
+  const lines = summarizeOutOfBoundsByFrame(hits).map((item) => item.description);
   const shown = lines.slice(0, 12);
   const omitted = lines.length - shown.length;
 

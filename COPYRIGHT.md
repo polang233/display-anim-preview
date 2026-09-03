@@ -7,6 +7,10 @@ written permission, no person may modify, redistribute, relicense, sell, or publ
 versions of the source code or compiled plugin, except for viewing and forking through GitHub as
 permitted by GitHub's Terms of Service.
 
+A contributor may modify a GitHub Fork only as necessary to prepare a proposed contribution under
+the repository's `CONTRIBUTING.md` process. This limited permission does not allow the contributor
+to publish, distribute, repackage, or release the modified source code or a compiled build.
+
 The official Blockbench plugin repository may host and distribute the unmodified compiled plugin
 submitted by the copyright holder.
 

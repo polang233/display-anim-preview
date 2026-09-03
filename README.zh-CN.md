@@ -10,6 +10,9 @@ Java 逐帧显示动画是一款适用于 Blockbench 桌面版的插件，用于
 Minecraft 资源包和数据包。它只调用 Blockbench 当前可用的 Java 模型编译器，不会接管、修改
 或替换其他插件的工程格式，也不会提供已经移除的旧式模型序列 ZIP 导出功能。
 
+> 本文对应准备审查的 **1.1.0 正式版**。下方 1.1.0 下载链接将在审查后创建 GitHub Release
+> 时生效；当前尚未上传。
+
 ## 演示效果
 
 ### Blockbench 显示位置动画预览
@@ -30,11 +33,15 @@ https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
 - 在编辑、绘画、动画和显示调整模式中预览动画。
 - 为第一人称、第三人称、GUI、地面、头部、展示框、内嵌和展示架等显示位置分别保存动画开关。
 - 关闭动画的显示位置固定使用第 0 帧；开启的位置跟随导出的 `custom_model_data` 帧。
-- 按 Minecraft 每秒 20 游戏刻进行烘焙，并对内容完全相同的模型帧去重。
+- 工程动画 FPS 支持 1～20，并统一控制预览、烘焙、范围检查与 Minecraft 播放速度；内容完全相同的模型帧自动去重。
 - 导出前检查模型坐标范围、工程与纹理分辨率、缺失纹理引用和粒子纹理。
 - 生成适用于 Minecraft 26.2 的 `display_context` 与 `custom_model_data` 物品模型路由。
-- 自动生成 `give`、`play_loop`、`play_once`、`next`、`prev`、`reset` 和 `stop` 数据包函数。
+- 在统一侧栏分页项目设置中勾选多段动画、预览 Minecraft key 并指定默认动画；导出不再重复询问。
+- 用 `custom_model_data.strings[0]` 选动画 key，用 `custom_model_data.floats[0]` 选该段局部帧。
+- 固定使用 `jsb` 命名空间，生成逐动画短命令和 `play`/`frame` 动态宏接口。
+- 可创建新包，或把项目作为受清单管理的模块安全插入现有解压资源包和数据包。
 - 使用导出清单，只清理由本插件上次生成但本次不再使用的旧文件。
+- 每件不可堆叠物品独立保存动画进度；多件相同模型物品不会互相串联状态。
 
 ## 环境要求
 
@@ -49,11 +56,11 @@ GitHub Releases 提供两个安装包。两者动画和导出功能完全相同�
 
 | 安装包 | 语言行为 |
 |---|---|
-| [下载通用语言版](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-universal.zip) | 以英文为基础；跟随 Blockbench 语言，Blockbench 使用简体中文时自动显示中文 |
-| [下载简体中文版](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/java-display-animator-v1.0.0-zh-CN.zip) | 无论 Blockbench 使用什么语言，插件始终显示简体中文 |
+| [下载通用语言版](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/java-display-animator-v1.1.0-universal.zip) | 以英文为基础；跟随 Blockbench 语言，Blockbench 使用简体中文时自动显示中文 |
+| [下载简体中文版](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/java-display-animator-v1.1.0-zh-CN.zip) | 无论 Blockbench 使用什么语言，插件始终显示简体中文 |
 
 Blockbench 官方插件仓库提交的是通用语言版。
-[SHA-256 校验文件](https://github.com/rieyi/display-anim-preview/releases/download/v1.0.0/SHA256SUMS.txt)
+[SHA-256 校验文件](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/SHA256SUMS.txt)
 可用于确认下载文件完整性。
 
 ## 安装方法
@@ -64,8 +71,8 @@ Blockbench 官方插件仓库提交的是通用语言版。
 2. 解压 ZIP，不能直接把 ZIP 当作插件加载。
 3. 在 Blockbench 中打开“**文件 → 插件**”。
 4. 选择“**从文件加载插件**”，打开解压目录中的 `display_anim_preview.js`。
-5. 在已安装插件中确认版本为 **Java Display Animator 1.0.0**；简体中文专版显示为
-   **Java 逐帧显示动画 1.0.0**。
+5. 在已安装插件中确认版本为 **Java Display Animator 1.1.0**；简体中文专版显示为
+   **Java 逐帧显示动画 1.1.0**。
 
 如果之后加载另一个语言版本，它会替换当前版本，因为两个构建有意共用
 `display_anim_preview` 插件 ID。
@@ -81,9 +88,8 @@ Blockbench 官方插件仓库提交的是通用语言版。
 
 1. 选择“**文件 → 新建 → Java 逐帧显示动画**”。
 2. 创建物品几何体、骨骼组和纹理。
-3. 在 Blockbench“**动画**”模式中为骨骼组制作动画。导出时优先使用当前选中的动画；没有选中
-   时使用第一个动画。
-4. 设置动画吸附帧率。无论源帧率是多少，导出都会在保持时长的前提下重采样为 20 FPS。
+3. 在 Blockbench“**动画**”模式中为骨骼组制作一段或多段动画。预览面板仍播放当前选中的单段；导出时在独立列表中选择所需动画。
+4. 在项目设置中选择 1～20 的动画 FPS；它同时用于预览、导出采样、范围检查和游戏播放。
 
 插件格式使用 Minecraft 非中心网格。导出前不要把工程转换成中心网格格式，否则会改变显示
 变换使用的坐标基准。
@@ -126,24 +132,37 @@ Blockbench 官方插件仓库提交的是通用语言版。
 
 ### 5. 检查模型范围
 
-在命令面板运行“**检查动画模型范围**”。烘焙后的 Java 模型每个坐标必须位于 `-16` 到 `32`
-之间。如果报告列出越界帧，可以在游戏中使用数据包生成的 `next`、`prev` 函数查看对应帧，
-然后回到 Blockbench 减小相关动作幅度。
+在命令面板运行“**检查动画模型范围**”，然后选择快速数学检测或精确隔离检测。快速模式不使用
+Undo，适合制作中预警；精确模式复制工程到一次性内存项目并检查最终 Java 模型，每个坐标必须
+位于 `-16` 到 `32` 之间。进度面板支持取消，并按动画记忆本次会话中仍有效的结果。多段导出报告
+会同时列出越界动画原名、key 和局部帧。
+可在游戏中使用 `frame/<key> {frame:<帧号>}` 检查对应帧。
 
 ### 6. 导出资源包和数据包
 
-1. 在命令面板运行“**导出资源包和数据包**”。
-2. 选择导出内容：
+1. 先在命令面板运行“**Java 显示动画器项目设置**”。侧栏分页窗口可随时编辑常规信息、动画组、资源包/数据包目录、数据包和开发接口。再运行“**导出资源包和数据包**”。
+2. 在“动画”页勾选要导出的动画。列表显示原名和生成 key，并即时报告无效或重名 key，
+   并提供“全选/全不选”。例如 `TPS Reload` 会生成 `tps_reload`。
+3. 至少勾选一段。空 key、`.`、`..` 或净化后重名会阻止继续，需要先重命名冲突动画。
+4. 在同页从已选列表中指定默认动画。静态显示位置和无效 key 使用该段第 0 帧。
+5. 选择导出内容：
    - 在同一根目录下生成资源包和数据包；
    - 分别选择资源包与数据包父目录；
    - 仅生成资源包；
    - 仅生成数据包。
-3. 检查包名、资源命名空间、物品模型名、映射的原版物品、物品显示名、数据包命名空间、
-   记分板名称和播放标签。
-4. 选择父目录。在 macOS 上，目录选择器选择的是已存在的父目录，插件会在其中创建指定包名
-   的子目录。
-5. 如果存在帧率、纹理分辨率或模型范围问题，插件会把全部警告合并到一个窗口。检查后点击
+6. 选择创建新包或插入现有包，并检查包名、项目名、映射的原版物品、物品显示名、记分板和播放标签。资源包和数据包命名空间固定为 `jsb`。
+7. 创建模式选择父目录并建立指定包名子目录；插入模式选择带有效 `pack.mcmeta` 的已有已解压包文件夹。插件不修改已有 `pack.mcmeta`。
+8. 可在动画页选择是否“导出前进行精确范围检测”。无论是否开启，资源模型都在一次性工程中
+   隔离烘焙；关闭后不生成范围警告或检测状态。
+9. 如果存在帧率、纹理分辨率或已启用的模型范围问题，插件会把全部警告合并到一个窗口。检查后点击
    “**仍然导出**”才会开始生成文件；点击取消或关闭窗口时不会生成文件，并会显示“已取消导出”。
+
+首次只默认勾选 Blockbench 当前动画。项目设置的修改会立即写入 `.bbmodel` 的 `display_anim_export_settings` v6，将工程标记为未保存，但不自动保存。资源包和数据包目录可分别记忆；留空时会在导出时询问。
+
+每件 `give` 生成的物品都不可堆叠，并在自己的 `minecraft:custom_data.jsb` 中保存动画、帧、模式和
+相位。多件同模型物品不会共享进度。单次 `play` 物品离开主手后复位；`loop` 物品离手后保留进度，
+重新拿起同一件物品时继续；`stop` 只复位当前手持物品。
+仅导出数据包时，必须与采用相同动画 key/帧数映射的资源包配套。
 
 默认共用根目录会生成：
 
@@ -153,8 +172,25 @@ Blockbench 官方插件仓库提交的是通用语言版。
 └── datapacks/<包名>/
 ```
 
-只有出现“**导出完成**”窗口才表示文件已经写入并通过校验。该窗口会显示采样帧数、唯一模型
-数、去重帧数、模型 JSON 体积、忽略的未贴图面、输出位置和主要游戏内命令。
+开启动画的显示位置先通过 `custom_model_data.strings[0]` 选动画 key，再通过
+`custom_model_data.floats[0]` 选该段局部帧。静态位置直接使用默认段第 0 帧，无效 key 回退默认段。
+所有显示位置都关闭动画时，导出前会警告其他所选动画不会可见，资源包只写默认段第 0 帧。
+模型 JSON 会在所有动画之间全局去重，但每段仍保留自己的局部帧序列和统计。
+
+固定资源目录为：
+
+```text
+assets/jsb/items/<项目>.json
+assets/jsb/models/<项目>/<动画>/<位置简写>/<帧>.json
+assets/jsb/models/<项目>/_generated/model_<n>.json
+assets/jsb/textures/<项目>/...
+```
+
+只有开启动画的显示位置才生成位置目录；逐帧文件只引用 `_generated` 中全局去重的完整模型。
+资源包根目录使用 `assets.jsbmeta`，数据包根目录使用 `data.jsbmeta`。两份集中清单分别按项目管理资源文件和驱动文件，便于未来独立升级。再次插入同一项目时，只更新对应清单中登记的项目文件；路径冲突会阻止写入，中途失败会回滚，数据包 load/tick 标签与地图现有值合并。
+
+只有出现“**导出完成**”窗口才表示文件已经写入并通过校验。该窗口会按动画显示 key 和帧统计，
+并列出唯一模型数、去重帧数、模型 JSON 体积、忽略的未贴图面、输出位置和可复制的游戏内命令。
 
 ### 7. 在 Minecraft 中安装和测试
 
@@ -163,24 +199,30 @@ Blockbench 官方插件仓库提交的是通用语言版。
 3. 进入“**选项 → 资源包**”，将刚放入的资源包移动到“已选”一侧并点击“完成”。仅把目录复制
    到 `resourcepacks` 或按 `F3+T`，不会自动启用一个尚未选中的资源包。
 4. 资源包已经启用时，重新导出后按 `F3+T` 重载；数据包则重载或重新打开世界。
-5. 使用导出时填写的数据包命名空间执行：
+5. 把 `<项目>` 换成导出时填写的项目名，优先使用短入口：
 
 ```mcfunction
-/function <命名空间>:give
-/function <命名空间>:play_loop
+/function jsb:<项目>/give
+/function jsb:<项目>/play/reload
+/function jsb:<项目>/loop/fire
+/function jsb:<项目>/frame/reload {frame:12}
+/function jsb:<项目>/stop
 ```
 
-其他控制命令：
+地图函数需要动态选择动画时使用：
 
 ```mcfunction
-/function <命名空间>:play_once
-/function <命名空间>:next
-/function <命名空间>:prev
-/function <命名空间>:reset
-/function <命名空间>:stop
+/function jsb:<项目>/play {animation:"reload",mode:"once"}
+/function jsb:<项目>/play {animation:"fire",mode:"loop"}
+/function jsb:<项目>/frame {animation:"reload",frame:12}
 ```
+
+`reload` 和 `fire` 要替换为导出完成窗口显示的实际 key。`mode` 只接受 `once` 或 `loop`。
+`give` 和 `stop` 回到默认动画第 0 帧；`once` 在末帧显示一个游戏刻后也会复位；`frame` 停止播放并把帧号
+限制在目标动画的有效范围。1.1.0 不再生成 `play_loop`、`play_once`、`next`、`prev` 和 `reset`。
 
 依次检查 GUI、第一人称、第三人称、地面、头部和展示框。只有勾选动画的显示位置应该切换帧。
+还要测试至少两段不同长度动画的切换、循环、单次复位和指定帧。
 
 ## 常见问题
 
@@ -207,8 +249,17 @@ Blockbench 官方插件仓库提交的是通用语言版。
 ### 某个视角不播放动画
 
 - 在显示调整模式选择对应显示位置，并开启“当前显示位置播放动画”。
-- 确认数据包已加载，主手拿着生成物品时运行 `play_loop`。
+- 确认数据包已加载，主手拿着生成物品时运行
+  `play {animation:"<已导出-key>",mode:"loop"}`。
+- 确认 key 与导出完成窗口一致。`play` 中的无效 key 会报错并拒绝新请求；只有物品数据中
+  缺失或无效的 `strings[0]` 才会由资源模型回退到默认动画路由。
 - 确认物品使用了生成的 `minecraft:item_model` 组件。
+
+## 1.1.0 验证状态
+
+1.1.0 正式版代码已经收束并完成自动验证。开发阶段已有部分 Blockbench 实机和 Minecraft 数据包
+解析证据；正式构建的完整 Blockbench 冒烟测试、Minecraft 玩家在线多物品/FPS/视觉测试和最终
+验收仍待执行。审查完成前不推送或上传。
 
 ## 从源码构建
 
@@ -231,6 +282,11 @@ dist/display_anim_preview.official.js  官方仓库专用构建（About 由 abou
 简体中文 Release ZIP 会把内部插件文件改名为 `display_anim_preview.js`，因为 Blockbench 要求加载
 文件名与插件 ID 一致。
 官方仓库会把 `display_anim_preview.official.js` 复制并命名为 `display_anim_preview.js`。
+
+## 贡献
+
+本项目通过受控的 Fork 和 Pull Request 流程接受贡献。开始大型修改或提交 Pull Request 前，请先
+阅读英文版[贡献指南](CONTRIBUTING.md)。
 
 ## 版权说明
 

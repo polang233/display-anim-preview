@@ -1,4 +1,5 @@
 import { getDisplayAnimationEnabled } from "./display-animation-settings";
+import { getProjectAnimationFps, setProjectAnimationFps } from "./export-animation-settings";
 import { tr } from "./i18n";
 
 /** Bridges the plugin controls to Blockbench's official animation timeline and playback state. */
@@ -6,10 +7,19 @@ import { tr } from "./i18n";
 export type TickCallback = (currentTime: number, length: number, playing: boolean) => void;
 
 let lowFpsPreview = false;
+let previewLooping = false;
 let onTick: TickCallback = () => {};
 let listenersRegistered = false;
 let quantizedPreviewInProgress = false;
 let previewPlaybackTimer: number | null = null;
+let playbackIntent = false;
+let pauseResolutionToken = 0;
+let lastPlaybackTime = 0;
+let lastPlaybackAnimationUuid = "";
+
+function firstMinecraftFrameTime(animation: Animation): number {
+  return Math.min(1 / getProjectAnimationFps(), animation.length);
+}
 
 function getAnimation(): Animation | null {
   return Animation.selected ?? Animation.all[0] ?? null;
@@ -17,7 +27,7 @@ function getAnimation(): Animation | null {
 
 function quantize(time: number): number {
   if (!lowFpsPreview) return time;
-  const step = Timeline.getStep();
+  const step = 1 / getProjectAnimationFps();
   if (!step || step <= 0) return time;
   const epsilon = step * 1e-7;
   return Math.floor((time + epsilon) / step) * step;
@@ -48,6 +58,18 @@ function previewPlaybackAllowed(): boolean {
   );
 }
 
+function renderAtTimePreservingClock(time: number): void {
+  const rawTime = Timeline.time;
+  quantizedPreviewInProgress = true;
+  try {
+    Timeline.time = time;
+    Animator.preview(true);
+  } finally {
+    Timeline.time = rawTime;
+    quantizedPreviewInProgress = false;
+  }
+}
+
 function stopPreviewPlaybackDriver(): void {
   if (previewPlaybackTimer !== null) {
     clearInterval(previewPlaybackTimer);
@@ -58,8 +80,7 @@ function stopPreviewPlaybackDriver(): void {
 function drivePreviewPlayback(): void {
   if (
     !Timeline.playing ||
-    !usesPreviewPlaybackDriver() ||
-    !previewPlaybackAllowed()
+    !usesPreviewPlaybackDriver()
   ) {
     stopPreviewPlaybackDriver();
     return;
@@ -70,8 +91,7 @@ function drivePreviewPlayback(): void {
 function syncPreviewPlaybackDriver(): void {
   if (
     Timeline.playing &&
-    usesPreviewPlaybackDriver() &&
-    previewPlaybackAllowed()
+    usesPreviewPlaybackDriver()
   ) {
     if (previewPlaybackTimer === null) {
       previewPlaybackTimer = setInterval(drivePreviewPlayback, 16);
@@ -82,17 +102,19 @@ function syncPreviewPlaybackDriver(): void {
 }
 
 /**
- * Pauses and returns to the base pose when animation is disabled for the current display context.
+ * Keeps the official clock running across display contexts. Disabled contexts render frame 0
+ * without changing the clock, so returning to an enabled context continues uninterrupted.
  */
 export function enforceCurrentDisplayAnimationPolicy(): void {
   if (Modes.selected.id !== "display" || isCurrentDisplayAnimationEnabled()) {
+    if (Modes.selected.id === "display") Animator.preview();
     syncPreviewPlaybackDriver();
     report();
     return;
   }
-  if (Timeline.playing) Timeline.pause();
-  seekTo(0);
-  stopPreviewPlaybackDriver();
+  renderAtTimePreservingClock(0);
+  syncPreviewPlaybackDriver();
+  report();
 }
 
 /**
@@ -105,6 +127,33 @@ function handleDisplayFrame(): void {
   if (!animation) return;
 
   const rawTime = Timeline.time;
+  const animationChanged = lastPlaybackAnimationUuid !== animation.uuid;
+  if (animationChanged) {
+    lastPlaybackAnimationUuid = animation.uuid;
+    lastPlaybackTime = rawTime;
+  } else if (playbackIntent && rawTime + 1e-7 < lastPlaybackTime) {
+    if (!previewLooping) {
+      playbackIntent = false;
+      Timeline.pause();
+      Timeline.setTime(animation.length);
+      Animator.preview();
+      lastPlaybackTime = animation.length;
+      onTick(animation.length, animation.length, false);
+      return;
+    }
+    const restartTime = firstMinecraftFrameTime(animation);
+    Timeline.setTime(restartTime);
+    lastPlaybackTime = restartTime;
+    Animator.preview();
+    onTick(restartTime, animation.length, true);
+    return;
+  }
+  lastPlaybackTime = rawTime;
+  if (Modes.selected.id === "display" && !isCurrentDisplayAnimationEnabled()) {
+    renderAtTimePreservingClock(0);
+    report(rawTime);
+    return;
+  }
   const displayTime = Math.min(quantize(rawTime), animation.length);
   if (
     lowFpsPreview &&
@@ -132,17 +181,54 @@ function handleTimelinePlay(): void {
     );
     return;
   }
+  const animation = getAnimation();
+  if (
+    animation &&
+    !previewLooping &&
+    Timeline.time >= animation.length - 1e-7
+  ) {
+    const restartTime = firstMinecraftFrameTime(animation);
+    Timeline.setTime(restartTime);
+    lastPlaybackAnimationUuid = animation.uuid;
+    lastPlaybackTime = restartTime;
+    Animator.preview();
+  }
+  playbackIntent = true;
+  pauseResolutionToken++;
   syncPreviewPlaybackDriver();
   report();
 }
 
 function handleTimelinePause(): void {
   stopPreviewPlaybackDriver();
-  if (lowFpsPreview) {
-    seekTo(Timeline.time);
-  } else {
-    report();
-  }
+  const token = ++pauseResolutionToken;
+  const pausedMode = Modes.selected.id;
+  const shouldResumeAcrossModeChange = playbackIntent && pausedMode === "animate";
+  setTimeout(() => {
+    if (token !== pauseResolutionToken) return;
+    if (shouldResumeAcrossModeChange && Modes.selected.id === "display") {
+      Timeline.start();
+      return;
+    }
+    playbackIntent = false;
+    if (lowFpsPreview) {
+      const animation = getAnimation();
+      if (animation && Timeline.time >= animation.length - 1e-7) {
+        const displayTime = Math.min(quantize(animation.length), animation.length);
+        renderAtTimePreservingClock(displayTime);
+        onTick(displayTime, animation.length, false);
+      } else {
+        seekTo(Timeline.time);
+      }
+    } else report();
+  }, 0);
+}
+
+function handleAnimationSelect(): void {
+  const animation = getAnimation();
+  lastPlaybackAnimationUuid = animation?.uuid ?? "";
+  lastPlaybackTime = Timeline.time;
+  report();
 }
 
 function handleModeSelect(): void {
@@ -155,7 +241,10 @@ export function initializePlaybackSync(): void {
   Blockbench.on("timeline_play", handleTimelinePlay);
   Blockbench.on("timeline_pause", handleTimelinePause);
   Blockbench.on("select_mode", handleModeSelect);
+  Blockbench.on("select_animation", handleAnimationSelect);
   listenersRegistered = true;
+  previewLooping = false;
+  BarItems.looped_animation_playback.set(false);
   syncPreviewPlaybackDriver();
 }
 
@@ -165,6 +254,7 @@ export function disposePlaybackSync(): void {
   Blockbench.removeListener("timeline_play", handleTimelinePlay);
   Blockbench.removeListener("timeline_pause", handleTimelinePause);
   Blockbench.removeListener("select_mode", handleModeSelect);
+  Blockbench.removeListener("select_animation", handleAnimationSelect);
   stopPreviewPlaybackDriver();
   listenersRegistered = false;
   onTick = () => {};
@@ -175,10 +265,11 @@ export function isPlaying(): boolean {
 }
 
 export function isLooping(): boolean {
-  return BarItems.looped_animation_playback.value;
+  return previewLooping;
 }
 
 export function setLooping(value: boolean): void {
+  previewLooping = value;
   BarItems.looped_animation_playback.set(value);
 }
 
@@ -193,6 +284,19 @@ export function setLowFpsPreview(value: boolean): void {
   } else {
     seekTo(Timeline.time);
   }
+}
+
+export function getPreviewFps(): number {
+  return getProjectAnimationFps();
+}
+
+export function setPreviewFps(value: number): number {
+  const previewFps = setProjectAnimationFps(value);
+  if (lowFpsPreview) {
+    if (Timeline.playing) handleDisplayFrame();
+    else seekTo(Timeline.time);
+  }
+  return previewFps;
 }
 
 export function getCurrentTime(): number {
@@ -212,6 +316,25 @@ export function seekTo(time: number): void {
   Timeline.setTime(displayTime);
   Animator.preview();
   onTick(displayTime, animation.length, Timeline.playing);
+}
+
+/** Selects one animation and redraws its first moving Minecraft frame immediately. */
+export function selectPreviewAnimation(uuid: string): Animation | null {
+  const animation = Animation.all.find((item) => item.uuid === uuid) ?? null;
+  if (!animation) return null;
+  animation.select();
+  const startTime = firstMinecraftFrameTime(animation);
+  lastPlaybackAnimationUuid = animation.uuid;
+  lastPlaybackTime = startTime;
+  Timeline.setTime(startTime);
+  if (Modes.selected.id === "display" && !isCurrentDisplayAnimationEnabled()) {
+    renderAtTimePreservingClock(0);
+  } else {
+    Animator.preview();
+  }
+  syncPreviewPlaybackDriver();
+  onTick(startTime, animation.length, Timeline.playing);
+  return animation;
 }
 
 export function togglePlay(): void {
@@ -237,13 +360,13 @@ export function stop(): void {
   if (Timeline.playing) Timeline.pause();
 }
 
-/** Selects the current or first available animation and resets time to zero. */
+/** Selects the current or first available animation and shows its first moving Minecraft frame. */
 export function selectAnimationAndReset(): Animation | null {
   const animation = getAnimation();
   if (animation) {
     stop();
     animation.select();
-    seekTo(0);
+    seekTo(firstMinecraftFrameTime(animation));
   }
   return animation;
 }
