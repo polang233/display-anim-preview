@@ -12,8 +12,8 @@ preview its animation and export Minecraft resource and data packs. It only uses
 model compiler retained by Blockbench; it does not take ownership of, modify, or replace the other
 plugin's project format, and it does not restore the removed legacy model-sequence ZIP exporter.
 
-> This document describes the **1.1.0 release candidate** prepared for review. The 1.1.0 download
-> links below will become available after the reviewed files are uploaded to GitHub Releases.
+> The current stable version is **1.1.0**. GitHub Releases provides both Universal and fixed
+> Simplified Chinese packages.
 
 ## Demos
 
@@ -296,10 +296,9 @@ manual frame selection with at least two animations of different lengths.
 
 ## 1.1.0 validation status
 
-The 1.1.0 release code has been consolidated and passed automated validation. Parts of the Blockbench
-runtime flow and Minecraft datapack parsing were verified during development. A complete smoke test of
-the final build, an online-player test covering multiple items/FPS/visuals, and final acceptance remain
-pending. Nothing is pushed or uploaded before review.
+Version 1.1.0 passed automated validation. Core Blockbench preview, bounds-check, and export flows plus
+Minecraft datapack loading and function parsing were exercised during development. Online-player
+multi-item, non-20-FPS, and full visual combinations should still be checked with the procedure above.
 
 ## Build from source
 
