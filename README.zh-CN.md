@@ -1,265 +1,84 @@
 # Java 逐帧显示动画
 
-[English](https://github.com/rieyi/display-anim-preview/blob/main/README.md)
+**在 Blockbench 里按显示位置预览物品动画，并导出 Minecraft Java 版资源包与数据包。** Blockbench 桌面版插件。
 
-Java 逐帧显示动画是一款适用于 Blockbench 桌面版的插件，用于制作并导出 Minecraft Java 版的
-物品逐帧动画。你可以直接在 Blockbench 中预览动画，分别设置 GUI、第一人称、第三人称、地面
-等显示位置是否播放动画，然后一键导出所需的资源包和数据包。
+[English](README.md)
 
-如果当前打开的是由其他插件创建的 `java_block_sequence` 工程，本插件仍可预览动画并导出
-Minecraft 资源包和数据包。它只调用 Blockbench 当前可用的 Java 模型编译器，不会接管、修改
-或替换其他插件的工程格式，也不会提供已经移除的旧式模型序列 ZIP 导出功能。
+<p align="center">
+  <img src="assets/icon.png" alt="Java 逐帧显示动画" width="96">
+</p>
 
-> 当前正式版本为 **1.1.0**。GitHub Release 同时提供通用语言版和固定简体中文版。
+![Version](https://img.shields.io/github/v/release/rieyi/display-anim-preview?label=Version&color=2ea44f)
+![Blockbench](https://img.shields.io/badge/Blockbench-5.1.5%2B-3b82f6)
+![Minecraft](https://img.shields.io/badge/Minecraft_Java-26.2-62b47a)
+![Node](https://img.shields.io/badge/Node-20%2B_build_only-e76f00)
 
-## 演示效果
+## 下载 · Download
 
-### Blockbench 显示位置动画预览
+[![GitHub Releases](https://img.shields.io/badge/GitHub-Releases-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rieyi/display-anim-preview/releases)
+[![Blockbench Plugins](https://img.shields.io/badge/Blockbench-Plugins-3b82f6?style=for-the-badge&logo=blockbench&logoColor=white)](https://blockbench.net/plugins)
+
+请从[上游 Releases](https://github.com/rieyi/display-anim-preview/releases) 安装。[Blockbench 插件商店](https://blockbench.net/plugins)仍在审核中。
+
+Release 提供**通用语言版**（跟随 Blockbench 语言）和**固定简体中文版**。共用同一个插件 ID，只能装其中一个。
+
+## 简介 · Overview
+
+在 Blockbench 中制作 Minecraft Java 版物品逐帧动画：编辑 / 绘画 / 动画 / 显示调整均可预览，可分别选择哪些显示位置播放动画，再一键导出资源包和数据包。
+
+若当前打开的是其他插件创建的 `java_block_sequence` 工程，仍可预览并导出。本插件只使用 Blockbench 的 Java 模型编译器，不会接管对方工程格式，也不提供已移除的旧式模型序列 ZIP 导出。
+
+## 演示 · Demos
+
+### 编辑器预览 · Blockbench preview
+
+![Blockbench 显示位置动画预览](media/blockbench-preview.jpg)
 
 https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1
 
-如果播放器没有显示，可[直接打开 Blockbench 演示视频](https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1)。
+### 游戏内效果 · In-game
 
-### Minecraft 游戏内效果
+![Minecraft 游戏内效果](media/minecraft-result.jpg)
 
 https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
 
-如果播放器没有显示，可[直接打开 Minecraft 演示视频](https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a)。
+## 特性 · Features
 
-## 主要功能
+- 与 Blockbench 官方时间轴共用播放 / 暂停 / 循环 / 时间
+- 各显示位置独立动画开关（GUI、第一人称、第三人称、地面、头部、展示框等）
+- 关闭的位置固定第 0 帧；开启的跟随导出的 `custom_model_data` 帧
+- 工程帧率 1–20 FPS，统一用于预览、烘焙、范围检查和游戏内播放
+- 导出前检查坐标范围、纹理分辨率、缺失纹理与粒子纹理
+- 可勾选多段动画导出，生成 Minecraft key，并指定默认动画
+- 固定 `jsb` 命名空间，短命令以及 `play` / `frame` 宏
+- 每件不可堆叠物品独立保存播放进度
 
-- 使用 Blockbench 官方时间轴，插件面板与动画模式共享播放、暂停、循环和时间状态。
-- 在编辑、绘画、动画和显示调整模式中预览动画。
-- 为第一人称、第三人称、GUI、地面、头部、展示框、内嵌和展示架等显示位置分别保存动画开关。
-- 关闭动画的显示位置固定使用第 0 帧；开启的位置跟随导出的 `custom_model_data` 帧。
-- 工程动画 FPS 支持 1～20，并统一控制预览、烘焙、范围检查与 Minecraft 播放速度；内容完全相同的模型帧自动去重。
-- 导出前检查模型坐标范围、工程与纹理分辨率、缺失纹理引用和粒子纹理。
-- 生成适用于 Minecraft 26.2 的 `display_context` 与 `custom_model_data` 物品模型路由。
-- 在统一侧栏分页项目设置中勾选多段动画、预览 Minecraft key 并指定默认动画；导出不再重复询问。
-- 用 `custom_model_data.strings[0]` 选动画 key，用 `custom_model_data.floats[0]` 选该段局部帧。
-- 固定使用 `jsb` 命名空间，生成逐动画短命令和 `play`/`frame` 动态宏接口。
-- 可创建新包，或把项目作为受清单管理的模块安全插入现有解压资源包和数据包。
-- 使用导出清单，只清理由本插件上次生成但本次不再使用的旧文件。
-- 每件不可堆叠物品独立保存动画进度；多件相同模型物品不会互相串联状态。
+## 环境 · Requirements
 
-## 环境要求
+- Blockbench 桌面版 5.1.5+
+- 导出结果需 Minecraft Java 26.2
+- 仅从源码构建时需要 Node.js 20+
 
-- Blockbench 桌面版 5.1.5 或更高版本
-- 使用导出结果时需要 Minecraft Java 26.2
-- 只有从源码构建时才需要 Node.js 20 或更高版本
+## 安装 · Install
 
-## 下载版本说明
+1. 从 [Releases](https://github.com/rieyi/display-anim-preview/releases) 下载通用版或简体中文版 ZIP
+2. 解压（不要直接把 ZIP 当插件加载）
+3. Blockbench → **文件 → 插件 → 从文件加载插件**
+4. 选择 `display_anim_preview.js`
+5. 确认已安装 **Java Display Animator**（简体中文专版显示为 **Java 逐帧显示动画**）
 
-GitHub Releases 提供两个安装包。两者动画和导出功能完全相同，并使用同一个插件 ID，因此不能
-同时安装，只需选择其中一个。
+## 快速上手 · Quick start
 
-| 安装包 | 语言行为 |
-|---|---|
-| [下载通用语言版](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/java-display-animator-v1.1.0-universal.zip) | 以英文为基础；跟随 Blockbench 语言，Blockbench 使用简体中文时自动显示中文 |
-| [下载简体中文版](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/java-display-animator-v1.1.0-zh-CN.zip) | 无论 Blockbench 使用什么语言，插件始终显示简体中文 |
+1. **文件 → 新建 → Java 逐帧显示动画**
+2. 做好物品，在**动画**模式里做骨骼组动画
+3. 在**显示调整**里设变换，并开关各位置是否播放
+4. 命令面板 → **导出资源包和数据包**
+5. 在 Minecraft 26.2 启用资源包/数据包，用生成的 `jsb:…` 命令测试
 
-Blockbench 官方插件仓库提交的是通用语言版。
-[SHA-256 校验文件](https://github.com/rieyi/display-anim-preview/releases/download/v1.1.0/SHA256SUMS.txt)
-可用于确认下载文件完整性。
+完整教程：[doc/USAGE.zh-CN.md](doc/USAGE.zh-CN.md) · [English](doc/USAGE.md)  
+问题排查：[doc/TROUBLESHOOTING.zh-CN.md](doc/TROUBLESHOOTING.zh-CN.md) · [English](doc/TROUBLESHOOTING.md)
 
-## 安装方法
-
-### 从 GitHub Releases 安装
-
-1. 使用上方链接下载通用语言版或简体中文版 ZIP。
-2. 解压 ZIP，不能直接把 ZIP 当作插件加载。
-3. 在 Blockbench 中打开“**文件 → 插件**”。
-4. 选择“**从文件加载插件**”，打开解压目录中的 `display_anim_preview.js`。
-5. 在已安装插件中确认版本为 **Java Display Animator 1.1.0**；简体中文专版显示为
-   **Java 逐帧显示动画 1.1.0**。
-
-如果之后加载另一个语言版本，它会替换当前版本，因为两个构建有意共用
-`display_anim_preview` 插件 ID。
-
-### 从 Blockbench 官方插件商店安装
-
-插件通过审核后，在“**文件 → 插件 → 可用**”中搜索 **Java Display Animator** 并安装。官方
-商店条目与 About 页面按官方规范使用英文；安装后的通用版功能界面会跟随 Blockbench 语言。
-
-## 完整使用教程
-
-### 1. 创建或打开工程
-
-1. 选择“**文件 → 新建 → Java 逐帧显示动画**”。
-2. 创建物品几何体、骨骼组和纹理。
-3. 在 Blockbench“**动画**”模式中为骨骼组制作一段或多段动画。预览面板仍播放当前选中的单段；导出时在独立列表中选择所需动画。
-4. 在项目设置中选择 1～20 的动画 FPS；它同时用于预览、导出采样、范围检查和游戏播放。
-
-插件格式使用 Minecraft 非中心网格。导出前不要把工程转换成中心网格格式，否则会改变显示
-变换使用的坐标基准。
-
-### 2. 调整 Minecraft 显示位置
-
-1. 切换到 Blockbench“**显示调整**”模式。
-2. 分别设置 GUI、第一人称、第三人称、地面、头部、展示框等位置的旋转、平移和缩放。
-3. 大批量烘焙前先保存工程原件。
-
-导出开始时，插件会读取 Blockbench 当前官方编译结果中的 `display` 设置，并让所有烘焙帧使用
-同一份快照。因此游戏中的位置应对应当前显示调整预览，而不是旧帧中残留的显示变换。
-
-### 3. 设置哪些显示位置播放动画
-
-1. Windows/Linux 按 `Ctrl+P`，macOS 按 `Cmd+P` 打开命令面板。
-2. 运行“**打开显示位置动画预览**”。
-3. 在插件面板中选择一个显示位置。
-4. 处于显示调整模式时，勾选或取消“**当前显示位置播放动画**”。
-5. 对需要配置的其他显示位置重复操作。
-
-常用配置示例：
-
-| 显示位置 | 建议设置 |
-|---|---|
-| GUI / 背包图标 | 关闭 |
-| 第三人称左右手 | 关闭 |
-| 第一人称左右手 | 开启 |
-| 地面、头部、展示框 | 没有动画需求时关闭 |
-
-每个开关都独立保存在 `.bbmodel` 中。关闭当前显示位置的动画后，模型会暂停并回到第 0 帧，
-播放按钮也会变灰。“当前显示位置播放动画”只在显示调整模式显示，这是预期行为。
-
-### 4. 预览播放
-
-- 可以使用插件面板或 Blockbench 官方动画控件播放和暂停；两边控制的是同一条官方时间轴。
-- “循环”会同步修改官方循环播放状态。
-- “低帧”会按动画吸附帧率量化预览，用于模拟游戏内不插值的逐帧播放效果。
-- 拖动插件面板时间条可以检查单帧姿态。
-
-### 5. 检查模型范围
-
-在命令面板运行“**检查动画模型范围**”，然后选择快速数学检测或精确隔离检测。快速模式不使用
-Undo，适合制作中预警；精确模式复制工程到一次性内存项目并检查最终 Java 模型，每个坐标必须
-位于 `-16` 到 `32` 之间。进度面板支持取消，并按动画记忆本次会话中仍有效的结果。多段导出报告
-会同时列出越界动画原名、key 和局部帧。
-可在游戏中使用 `frame/<key> {frame:<帧号>}` 检查对应帧。
-
-### 6. 导出资源包和数据包
-
-1. 先在命令面板运行“**Java 显示动画器项目设置**”。侧栏分页窗口可随时编辑常规信息、动画组、资源包/数据包目录、数据包和开发接口。再运行“**导出资源包和数据包**”。
-2. 在“动画”页勾选要导出的动画。列表显示原名和生成 key，并即时报告无效或重名 key，
-   并提供“全选/全不选”。例如 `TPS Reload` 会生成 `tps_reload`。
-3. 至少勾选一段。空 key、`.`、`..` 或净化后重名会阻止继续，需要先重命名冲突动画。
-4. 在同页从已选列表中指定默认动画。静态显示位置和无效 key 使用该段第 0 帧。
-5. 选择导出内容：
-   - 在同一根目录下生成资源包和数据包；
-   - 分别选择资源包与数据包父目录；
-   - 仅生成资源包；
-   - 仅生成数据包。
-6. 选择创建新包或插入现有包，并检查包名、项目名、映射的原版物品、物品显示名、记分板和播放标签。资源包和数据包命名空间固定为 `jsb`。
-7. 创建模式选择父目录并建立指定包名子目录；插入模式选择带有效 `pack.mcmeta` 的已有已解压包文件夹。插件不修改已有 `pack.mcmeta`。
-8. 可在动画页选择是否“导出前进行精确范围检测”。无论是否开启，资源模型都在一次性工程中
-   隔离烘焙；关闭后不生成范围警告或检测状态。
-9. 如果存在帧率、纹理分辨率或已启用的模型范围问题，插件会把全部警告合并到一个窗口。检查后点击
-   “**仍然导出**”才会开始生成文件；点击取消或关闭窗口时不会生成文件，并会显示“已取消导出”。
-
-首次只默认勾选 Blockbench 当前动画。项目设置的修改会立即写入 `.bbmodel` 的 `display_anim_export_settings` v6，将工程标记为未保存，但不自动保存。资源包和数据包目录可分别记忆；留空时会在导出时询问。
-
-每件 `give` 生成的物品都不可堆叠，并在自己的 `minecraft:custom_data.jsb` 中保存动画、帧、模式和
-相位。多件同模型物品不会共享进度。单次 `play` 物品离开主手后复位；`loop` 物品离手后保留进度，
-重新拿起同一件物品时继续；`stop` 只复位当前手持物品。
-仅导出数据包时，必须与采用相同动画 key/帧数映射的资源包配套。
-
-默认共用根目录会生成：
-
-```text
-所选根目录/
-├── resource-packs/<包名>/
-└── datapacks/<包名>/
-```
-
-开启动画的显示位置先通过 `custom_model_data.strings[0]` 选动画 key，再通过
-`custom_model_data.floats[0]` 选该段局部帧。静态位置直接使用默认段第 0 帧，无效 key 回退默认段。
-所有显示位置都关闭动画时，导出前会警告其他所选动画不会可见，资源包只写默认段第 0 帧。
-模型 JSON 会在所有动画之间全局去重，但每段仍保留自己的局部帧序列和统计。
-
-固定资源目录为：
-
-```text
-assets/jsb/items/<项目>.json
-assets/jsb/models/<项目>/<动画>/<位置简写>/<帧>.json
-assets/jsb/models/<项目>/_generated/model_<n>.json
-assets/jsb/textures/<项目>/...
-```
-
-只有开启动画的显示位置才生成位置目录；逐帧文件只引用 `_generated` 中全局去重的完整模型。
-资源包根目录使用 `assets.jsbmeta`，数据包根目录使用 `data.jsbmeta`。两份集中清单分别按项目管理资源文件和驱动文件，便于未来独立升级。再次插入同一项目时，只更新对应清单中登记的项目文件；路径冲突会阻止写入，中途失败会回滚，数据包 load/tick 标签与地图现有值合并。
-
-只有出现“**导出完成**”窗口才表示文件已经写入并通过校验。该窗口会按动画显示 key 和帧统计，
-并列出唯一模型数、去重帧数、模型 JSON 体积、忽略的未贴图面、输出位置和可复制的游戏内命令。
-
-### 7. 在 Minecraft 中安装和测试
-
-1. 将生成的资源包目录放入 Minecraft `resourcepacks`，或测试服务器配置的资源包位置。
-2. 将生成的数据包目录放入 `<世界目录>/datapacks/`。
-3. 进入“**选项 → 资源包**”，将刚放入的资源包移动到“已选”一侧并点击“完成”。仅把目录复制
-   到 `resourcepacks` 或按 `F3+T`，不会自动启用一个尚未选中的资源包。
-4. 资源包已经启用时，重新导出后按 `F3+T` 重载；数据包则重载或重新打开世界。
-5. 把 `<项目>` 换成导出时填写的项目名，优先使用短入口：
-
-```mcfunction
-/function jsb:<项目>/give
-/function jsb:<项目>/play/reload
-/function jsb:<项目>/loop/fire
-/function jsb:<项目>/frame/reload {frame:12}
-/function jsb:<项目>/stop
-```
-
-地图函数需要动态选择动画时使用：
-
-```mcfunction
-/function jsb:<项目>/play {animation:"reload",mode:"once"}
-/function jsb:<项目>/play {animation:"fire",mode:"loop"}
-/function jsb:<项目>/frame {animation:"reload",frame:12}
-```
-
-`reload` 和 `fire` 要替换为导出完成窗口显示的实际 key。`mode` 只接受 `once` 或 `loop`。
-`give` 和 `stop` 回到默认动画第 0 帧；`once` 在末帧显示一个游戏刻后也会复位；`frame` 停止播放并把帧号
-限制在目标动画的有效范围。1.1.0 不再生成 `play_loop`、`play_once`、`next`、`prev` 和 `reset`。
-
-依次检查 GUI、第一人称、第三人称、地面、头部和展示框。只有勾选动画的显示位置应该切换帧。
-还要测试至少两段不同长度动画的切换、循环、单次复位和指定帧。
-
-## 常见问题
-
-### 出现黑紫方块
-
-- 先在“选项 → 资源包”确认导出的资源包已经启用。`F3+T` 只重载已启用资源包，不会替你启用
-  新放入目录的资源包。
-- 确认所有可见方块面都已经指定工程纹理。
-- UV 分辨率不一致通常导致贴图偏移、拉伸或裁切，本身一般不会直接产生黑紫方块；仍应确认
-  “项目设置”的 UV 分辨率与纹理实际尺寸是否符合制作预期。
-- 重新导出后按 `F3+T` 重载资源包；仅退出并重新进入世界不一定会重载资源包。
-- 检查客户端游戏目录的 `logs/latest.log`，而不是服务端日志。资源加载错误通常只在进入世界或
-  `F3+T` 时记录一次，可搜索 `Missing texture`、`Unable to load model`、`Failed to load`、
-  `item_model` 和 `atlas`。
-- 日志的 `Reloading ResourceManager` 列表中应出现导出的资源包；如果只有 `vanilla` 和模组，
-  说明资源包尚未启用。
-
-### 游戏内位置与显示调整不一致
-
-- 回到显示调整模式，确认 Blockbench 当前显示的变换。
-- 完成最后一次位置修改后重新导出。
-- 不要混用旧导出的模型，也不要把工程转换为中心网格格式。
-
-### 某个视角不播放动画
-
-- 在显示调整模式选择对应显示位置，并开启“当前显示位置播放动画”。
-- 确认数据包已加载，主手拿着生成物品时运行
-  `play {animation:"<已导出-key>",mode:"loop"}`。
-- 确认 key 与导出完成窗口一致。`play` 中的无效 key 会报错并拒绝新请求；只有物品数据中
-  缺失或无效的 `strings[0]` 才会由资源模型回退到默认动画路由。
-- 确认物品使用了生成的 `minecraft:item_model` 组件。
-
-## 1.1.0 验证状态
-
-1.1.0 已完成自动验证；开发阶段已验证主要 Blockbench 预览、范围检查、导出流程以及 Minecraft
-数据包加载与函数解析。玩家在线的多物品、非 20 FPS 和完整视觉组合仍建议按上方流程复测。
-
-## 从源码构建
+## 构建 · Build
 
 ```bash
 npm ci
@@ -269,26 +88,10 @@ npm run build:release
 npm run build:official
 ```
 
-构建结果：
+## 贡献 · Contributing
 
-```text
-dist/display_anim_preview.js        通用语言版
-dist/display_anim_preview.zh-CN.js  简体中文版构建源文件
-dist/display_anim_preview.official.js  官方仓库专用构建（About 由 about.md 提供）
-```
+仅接受受控的 Fork + Pull Request。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-简体中文 Release ZIP 会把内部插件文件改名为 `display_anim_preview.js`，因为 Blockbench 要求加载
-文件名与插件 ID 一致。
-官方仓库会把 `display_anim_preview.official.js` 复制并命名为 `display_anim_preview.js`。
+## 版权 · Copyright
 
-## 贡献
-
-本项目通过受控的 Fork 和 Pull Request 流程接受贡献。开始大型修改或提交 Pull Request 前，请先
-阅读英文版[贡献指南](CONTRIBUTING.md)。
-
-## 版权说明
-
-Copyright © 2026 rieyi. All rights reserved. 详见
-[COPYRIGHT.md](https://github.com/rieyi/display-anim-preview/blob/main/COPYRIGHT.md)。
-
-本仓库公开可见，但没有授予开源许可证。
+Copyright © 2026 rieyi。详见 [COPYRIGHT.md](COPYRIGHT.md)。仓库可公开浏览，不附开源许可。
