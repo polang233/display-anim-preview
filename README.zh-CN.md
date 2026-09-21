@@ -1,6 +1,6 @@
 # Java 逐帧显示动画
 
-**在 Blockbench 里按显示位置预览物品动画，并导出 Minecraft Java 版资源包与数据包。** Blockbench 桌面版插件。
+**在 Blockbench 里按显示位置预览物品动画（编辑 / 绘画 / 动画 / 显示调整），并导出 Minecraft Java 版资源包与数据包。** 对其他插件的 `java_block_sequence` 工程也可预览/导出，不会接管对方格式。
 
 [English](README.md)
 
@@ -22,25 +22,23 @@
 
 Release 提供**通用语言版**（跟随 Blockbench 语言）和**固定简体中文版**。共用同一个插件 ID，只能装其中一个。
 
-## 简介 · Overview
-
-在 Blockbench 中制作 Minecraft Java 版物品逐帧动画：编辑 / 绘画 / 动画 / 显示调整均可预览，可分别选择哪些显示位置播放动画，再一键导出资源包和数据包。
-
-若当前打开的是其他插件创建的 `java_block_sequence` 工程，仍可预览并导出。本插件只使用 Blockbench 的 Java 模型编译器，不会接管对方工程格式，也不提供已移除的旧式模型序列 ZIP 导出。
-
 ## 演示 · Demos
 
-### 编辑器预览 · Blockbench preview
+<p align="center">
+  <img src="media/blockbench-preview.jpg" alt="Blockbench 预览" width="48%" />
+  &nbsp;
+  <img src="media/minecraft-result.jpg" alt="游戏内效果" width="48%" />
+</p>
 
-![Blockbench 显示位置动画预览](media/blockbench-preview.jpg)
+<p align="center">
+  <img src="media/blockbench-preview.gif" alt="Blockbench 预览动画" width="48%" />
+  &nbsp;
+  <img src="media/minecraft-result.gif" alt="游戏内动画" width="48%" />
+</p>
 
-https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1
-
-### 游戏内效果 · In-game
-
-![Minecraft 游戏内效果](media/minecraft-result.jpg)
-
-https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
+<p align="center">
+  <sub>左：Blockbench · 右：Minecraft</sub>
+</p>
 
 ## 特性 · Features
 

@@ -1,6 +1,6 @@
 # Java Display Animator
 
-**Preview item animations per display context, then export a Minecraft Java resource pack and datapack.** A Blockbench Desktop plugin.
+**In Blockbench, preview item animations per display context (Edit / Paint / Animate / Display), then export a Minecraft Java resource pack and datapack.** Also works on an open `java_block_sequence` project for preview/export without taking over that format.
 
 [简体中文](README.zh-CN.md)
 
@@ -22,25 +22,23 @@ Install from [upstream Releases](https://github.com/rieyi/display-anim-preview/r
 
 Releases ship **Universal** (follows Blockbench language) and **Simplified Chinese** (always zh-CN). Same plugin ID — install only one.
 
-## Overview · 简介
-
-Make frame-baked Minecraft Java item animations in Blockbench: preview in Edit / Paint / Animate / Display, pick which display contexts animate, then export the resource pack and datapack together.
-
-Works on an open `java_block_sequence` project from another plugin for preview and export. It uses Blockbench’s Java model compiler only; it does not take over that project format or restore the old model-sequence ZIP exporter.
-
 ## Demos · 演示
 
-### Blockbench preview · 编辑器预览
+<p align="center">
+  <img src="media/blockbench-preview.jpg" alt="Blockbench preview" width="48%" />
+  &nbsp;
+  <img src="media/minecraft-result.jpg" alt="In-game result" width="48%" />
+</p>
 
-![Blockbench display-context animation preview](media/blockbench-preview.jpg)
+<p align="center">
+  <img src="media/blockbench-preview.gif" alt="Blockbench preview animation" width="48%" />
+  &nbsp;
+  <img src="media/minecraft-result.gif" alt="In-game animation" width="48%" />
+</p>
 
-https://github.com/user-attachments/assets/536b887c-1df0-4747-b160-68a98db1f6b1
-
-### In-game · 游戏内效果
-
-![In-game Minecraft result](media/minecraft-result.jpg)
-
-https://github.com/user-attachments/assets/97ebae97-5083-4db9-8c3b-b30410d11f3a
+<p align="center">
+  <sub>Left: Blockbench · Right: Minecraft</sub>
+</p>
 
 ## Features · 特性
 
