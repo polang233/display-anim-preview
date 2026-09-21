@@ -2,7 +2,7 @@
 
 **In Blockbench, preview item animations per display context (Edit / Paint / Animate / Display), then export a Minecraft Java resource pack and datapack.** Also works on an open `java_block_sequence` project for preview/export without taking over that format.
 
-[简体中文](README.zh-CN.md)
+> 中文用户[点击此处](doc/README.zh-CN.md)查看介绍
 
 <p align="center">
   <img src="assets/icon.png" alt="Java Display Animator" width="96">
@@ -18,22 +18,22 @@
 [![GitHub Releases](https://img.shields.io/badge/GitHub-Releases-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rieyi/display-anim-preview/releases)
 [![Blockbench Plugins](https://img.shields.io/badge/Blockbench-Plugins-3b82f6?style=for-the-badge&logo=blockbench&logoColor=white)](https://blockbench.net/plugins)
 
-Install from [upstream Releases](https://github.com/rieyi/display-anim-preview/releases). The [Blockbench Plugins](https://blockbench.net/plugins) listing is still under review.
+Download from [GitHub Releases](https://github.com/rieyi/display-anim-preview/releases). The [Blockbench Plugins](https://blockbench.net/plugins) listing is still under review.
 
 Releases ship **Universal** (follows Blockbench language) and **Simplified Chinese** (always zh-CN). Same plugin ID — install only one.
 
 ## Demos · 演示
 
 <p align="center">
-  <img src="media/blockbench-preview.jpg" alt="Blockbench preview" width="48%" />
+  <img src="assets/blockbench-preview.jpg" alt="Blockbench preview" width="48%" />
   &nbsp;
-  <img src="media/minecraft-result.jpg" alt="In-game result" width="48%" />
+  <img src="assets/minecraft-result.jpg" alt="In-game result" width="48%" />
 </p>
 
 <p align="center">
-  <img src="media/blockbench-preview.gif" alt="Blockbench preview animation" width="48%" />
+  <img src="assets/blockbench-preview.gif" alt="Blockbench preview animation" width="48%" />
   &nbsp;
-  <img src="media/minecraft-result.gif" alt="In-game animation" width="48%" />
+  <img src="assets/minecraft-result.gif" alt="In-game animation" width="48%" />
 </p>
 
 <p align="center">

@@ -1,6 +1,6 @@
 # 用法 · Usage
 
-Java 逐帧显示动画的完整使用说明。简短介绍见 [README.zh-CN.md](../README.zh-CN.md)。
+Java 逐帧显示动画的完整使用说明。简短介绍见 [README.zh-CN.md](README.zh-CN.md)。
 
 ## 步骤
 

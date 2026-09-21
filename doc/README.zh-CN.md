@@ -2,10 +2,10 @@
 
 **在 Blockbench 里按显示位置预览物品动画（编辑 / 绘画 / 动画 / 显示调整），并导出 Minecraft Java 版资源包与数据包。** 对其他插件的 `java_block_sequence` 工程也可预览/导出，不会接管对方格式。
 
-[English](README.md)
+[English](../README.md)
 
 <p align="center">
-  <img src="assets/icon.png" alt="Java 逐帧显示动画" width="96">
+  <img src="../assets/icon.png" alt="Java 逐帧显示动画" width="96">
 </p>
 
 ![Version](https://img.shields.io/github/v/release/rieyi/display-anim-preview?label=Version&color=2ea44f)
@@ -18,22 +18,22 @@
 [![GitHub Releases](https://img.shields.io/badge/GitHub-Releases-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rieyi/display-anim-preview/releases)
 [![Blockbench Plugins](https://img.shields.io/badge/Blockbench-Plugins-3b82f6?style=for-the-badge&logo=blockbench&logoColor=white)](https://blockbench.net/plugins)
 
-请从[上游 Releases](https://github.com/rieyi/display-anim-preview/releases) 安装。[Blockbench 插件商店](https://blockbench.net/plugins)仍在审核中。
+请从 [GitHub Releases](https://github.com/rieyi/display-anim-preview/releases) 下载安装。[Blockbench 插件商店](https://blockbench.net/plugins)仍在审核中。
 
 Release 提供**通用语言版**（跟随 Blockbench 语言）和**固定简体中文版**。共用同一个插件 ID，只能装其中一个。
 
 ## 演示 · Demos
 
 <p align="center">
-  <img src="media/blockbench-preview.jpg" alt="Blockbench 预览" width="48%" />
+  <img src="../assets/blockbench-preview.jpg" alt="Blockbench 预览" width="48%" />
   &nbsp;
-  <img src="media/minecraft-result.jpg" alt="游戏内效果" width="48%" />
+  <img src="../assets/minecraft-result.jpg" alt="游戏内效果" width="48%" />
 </p>
 
 <p align="center">
-  <img src="media/blockbench-preview.gif" alt="Blockbench 预览动画" width="48%" />
+  <img src="../assets/blockbench-preview.gif" alt="Blockbench 预览动画" width="48%" />
   &nbsp;
-  <img src="media/minecraft-result.gif" alt="游戏内动画" width="48%" />
+  <img src="../assets/minecraft-result.gif" alt="游戏内动画" width="48%" />
 </p>
 
 <p align="center">
@@ -73,8 +73,8 @@ Release 提供**通用语言版**（跟随 Blockbench 语言）和**固定简体
 4. 命令面板 → **导出资源包和数据包**
 5. 在 Minecraft 26.2 启用资源包/数据包，用生成的 `jsb:…` 命令测试
 
-完整教程：[doc/USAGE.zh-CN.md](doc/USAGE.zh-CN.md) · [English](doc/USAGE.md)  
-问题排查：[doc/TROUBLESHOOTING.zh-CN.md](doc/TROUBLESHOOTING.zh-CN.md) · [English](doc/TROUBLESHOOTING.md)
+完整教程：[USAGE.zh-CN.md](USAGE.zh-CN.md) · [English](USAGE.md)  
+问题排查：[TROUBLESHOOTING.zh-CN.md](TROUBLESHOOTING.zh-CN.md) · [English](TROUBLESHOOTING.md)
 
 ## 构建 · Build
 
